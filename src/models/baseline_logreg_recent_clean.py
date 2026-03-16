@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -11,32 +12,36 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from src.utils.io import read_parquet
-
-INPUT_PATH = Path("data/processed/features_24h_enriched.parquet")
+INPUT_PATH = Path("data/processed/features_24h_recent_enriched.parquet")
 
 
-def run_baseline_model() -> None:
-    df = read_parquet(INPUT_PATH).copy()
+def run_baseline_model_recent_clean() -> None:
+    df = pd.read_parquet(INPUT_PATH).copy()
+
+    df["log_volume"] = np.log1p(pd.to_numeric(df["volume"], errors="coerce"))
+
     df = df[df["resolved_outcome"].notna()].copy()
     df = df[df["market_implied_prob"].notna()].copy()
 
     y = df["resolved_outcome"].astype(int)
 
     feature_cols = [
-        "category",
+        "category_fallback",
         "duration_hours",
         "market_implied_prob",
+        "log_volume",
     ]
     X = df[feature_cols].copy()
 
-    numeric_features = ["duration_hours", "market_implied_prob"]
-    categorical_features = ["category"]
+    numeric_features = [
+        "duration_hours",
+        "market_implied_prob",
+        "log_volume",
+    ]
+    categorical_features = ["category_fallback"]
 
     numeric_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-        ]
+        steps=[("imputer", SimpleImputer(strategy="median"))]
     )
 
     categorical_transformer = Pipeline(
@@ -72,9 +77,10 @@ def run_baseline_model() -> None:
     y_prob = model.predict_proba(X_test)[:, 1]
 
     model_brier = brier_score_loss(y_test, y_prob)
-
-    market_baseline_prob = X_test["market_implied_prob"].astype(float).values
-    market_brier = brier_score_loss(y_test, market_baseline_prob)
+    market_brier = brier_score_loss(
+        y_test,
+        X_test["market_implied_prob"].astype(float).values,
+    )
 
     print(f"[INFO] Rows used: {len(df)}")
     print(f"[INFO] Train rows: {len(X_train)}")
@@ -84,23 +90,19 @@ def run_baseline_model() -> None:
 
     classifier = model.named_steps["classifier"]
     preprocessor_fitted = model.named_steps["preprocessor"]
-
     feature_names = preprocessor_fitted.get_feature_names_out()
     coefs = classifier.coef_[0]
 
     coef_df = pd.DataFrame(
-        {
-            "feature": feature_names,
-            "coefficient": coefs,
-        }
+        {"feature": feature_names, "coefficient": coefs}
     ).sort_values("coefficient", ascending=False)
 
     print("\n[INFO] Top positive coefficients:")
-    print(coef_df.head(10).to_string(index=False))
+    print(coef_df.head(15).to_string(index=False))
 
     print("\n[INFO] Top negative coefficients:")
-    print(coef_df.tail(10).to_string(index=False))
+    print(coef_df.tail(15).to_string(index=False))
 
 
 if __name__ == "__main__":
-    run_baseline_model()
+    run_baseline_model_recent_clean()

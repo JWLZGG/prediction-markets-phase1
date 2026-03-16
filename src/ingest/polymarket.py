@@ -15,30 +15,33 @@ PROCESSED_PATH = Path("data/processed/polymarket_markets_raw.parquet")
 GAMMA_MARKETS_URL = "https://gamma-api.polymarket.com/markets"
 
 
-def fetch_markets(limit: int = 200, closed: bool = True) -> list[dict[str, Any]]:
+def fetch_markets(
+    limit: int = 200,
+    closed: bool = True,
+    extra_params: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     """
     Fetch markets from the Polymarket Gamma API.
     """
-    params = {
+    params: dict[str, Any] = {
         "limit": limit,
         "closed": str(closed).lower(),
     }
+
+    if extra_params:
+        params.update(extra_params)
 
     response = requests.get(GAMMA_MARKETS_URL, params=params, timeout=30)
     response.raise_for_status()
     data = response.json()
 
     if not isinstance(data, list):
-        raise ValueError("Expected list response from Polymarket Gamma API")
+        raise ValueError(f"Expected list response from Polymarket Gamma API, got: {type(data)}")
 
     return data
 
 
 def normalize_market(raw: dict[str, Any]) -> dict[str, Any]:
-    """
-    Normalize one raw Polymarket market payload into a flatter structure.
-    Adjust field names later if API payload differs.
-    """
     return {
         "market_id": raw.get("id"),
         "question": raw.get("question"),
@@ -58,13 +61,9 @@ def normalize_market(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_raw_markets_dataframe(raw_markets: list[dict[str, Any]]) -> pd.DataFrame:
-    """
-    Convert raw market payloads into a normalized dataframe.
-    """
     records = [normalize_market(m) for m in raw_markets]
     df = pd.DataFrame(records)
 
-    # Normalize timestamps
     if "created_at" in df.columns:
         df["created_at"] = df["created_at"].apply(to_utc_timestamp)
     if "end_date" in df.columns:
@@ -73,7 +72,22 @@ def build_raw_markets_dataframe(raw_markets: list[dict[str, Any]]) -> pd.DataFra
     return df
 
 
-def run_polymarket_ingestion(limit: int = 200) -> None:
+def save_probe(name: str, raw_markets: list[dict[str, Any]]) -> None:
+    """
+    Save a raw probe response so we can compare which query shapes return newer markets.
+    """
+    ensure_dir(RAW_DIR)
+    path = RAW_DIR / f"{name}.json"
+    write_json(raw_markets, path)
+    print(f"[OK] Saved probe response to {path}")
+
+
+def run_polymarket_ingestion(
+    limit: int = 200,
+    offset: int = 0,
+    output_name: str = "polymarket_markets_raw.parquet",
+    raw_name: str = "resolved_markets.json",
+) -> None:
     """
     End-to-end ingestion:
     1. fetch raw markets
@@ -81,17 +95,25 @@ def run_polymarket_ingestion(limit: int = 200) -> None:
     3. normalize and save parquet
     """
     ensure_dir(RAW_DIR)
-    ensure_dir(PROCESSED_PATH.parent)
+    ensure_dir(Path("data/processed"))
 
-    raw_markets = fetch_markets(limit=limit, closed=True)
-    write_json(raw_markets, RAW_DIR / "resolved_markets.json")
+    raw_markets = fetch_markets(
+        limit=limit,
+        closed=True,
+        extra_params={"offset": offset},
+    )
+    write_json(raw_markets, RAW_DIR / raw_name)
 
     df = build_raw_markets_dataframe(raw_markets)
-    write_parquet(df, PROCESSED_PATH)
+    output_path = Path("data/processed") / output_name
+    write_parquet(df, output_path)
 
-    print(f"[OK] Saved raw Polymarket markets to {RAW_DIR / 'resolved_markets.json'}")
-    print(f"[OK] Saved normalized parquet to {PROCESSED_PATH}")
+    print(f"[OK] Saved raw Polymarket markets to {RAW_DIR / raw_name}")
+    print(f"[OK] Saved normalized parquet to {output_path}")
     print(f"[INFO] Rows written: {len(df)}")
+    if "end_date" in df.columns:
+        print(f"[INFO] max end_date: {df['end_date'].max()}")
+        print(f"[INFO] min end_date: {df['end_date'].min()}")
 
 
 if __name__ == "__main__":
