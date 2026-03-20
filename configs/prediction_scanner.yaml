@@ -1,3 +1,19 @@
 loop_interval_seconds: 10
 max_cycles: 2
-simulate_kalshi_fail_once: true
+kalshi_max_markets: 3000
+simulate_kalshi_fail_once: false
+
+venues:
+  polymarket:
+    taker_fee_bps: 0
+    slippage_buffer_bps: 50
+    fixed_buffer: 0.0
+
+  kalshi:
+    taker_fee_bps: 25
+    slippage_buffer_bps: 50
+    fixed_buffer: 0.0
+
+scanner:
+  min_edge_bps: 100
+  default_target_size: 100
