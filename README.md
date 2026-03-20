@@ -1,160 +1,299 @@
 # Prediction Markets Phase 1
 
-Phase 1 builds a snapshot-based prediction-market modelling and monitoring pipeline.
+Prediction Markets Phase 1 is a forecasting and detector prototype for prediction markets, focused on two venues:
 
-## Objective
+- **Polymarket**
+- **Kalshi**
 
-Train on resolved historical markets, compare model performance against market-implied probabilities, select the strongest snapshot timing and score current live markets.
+The repo currently contains two working layers:
 
-## Main result
+1. a **historical forecasting / ML pipeline**
+2. a **detector / scanner core** for executable opportunity logic
 
-The 24h-before-close snapshot is the strongest modelling point in Phase 1.
+---
 
-- Midpoint snapshot adds smaller but positive signal
-- Open snapshot is not currently robust enough
-- Polymarket current scoring is cleaner and more trustworthy
-- Kalshi current scoring is integrated, but still exploratory due to cross-venue domain shift
+## Overview
 
-## Key deliverables
+The project began as a Phase 1 modelling pipeline: ingest resolved markets, build timestamp-safe snapshots, train a baseline forecasting model, compare it against market-implied probabilities and score current markets.
 
-### Walkthrough
-- `notebooks/day13_walkthrough.ipynb`
+It has since expanded into a scanner prototype with:
 
-### Final reports
-- `reports/final_model_report.md`
-- `reports/current_monitor_report.md`
-- `reports/offline_snapshot_summary.md`
-- `reports/best_24h_coefficients.md`
+- executable book-walking
+- fee and slippage-aware cost modelling
+- edge computation
+- structured JSONL logging
+- synthetic and live scanner modes
 
-### Key outputs
-- `reports/offline_snapshot_summary.csv`
-- `reports/best_24h_coefficients.csv`
-- `reports/current_polymarket_top_edges_trained.csv`
-- `reports/kalshi_current_top_edges_trained.csv`
-- `reports/best_24h_model.pkl`
+The current state is best described as:
 
-## Core commands
+- **forecasting pipeline: working**
+- **detector primitives: working**
+- **first live executable detection: working, but coverage-limited**
+- **replay and larger-scale live executable monitoring: still in progress**
 
-### Historical pipeline
-```bash
-python -m src.main features_recent
-python -m src.main snapshots_recent
-python -m src.main enrich_probs_recent
-python -m src.main enrich_probs_mid_recent
-python -m src.main enrich_probs_open_recent
-python -m src.main enrich_history_24h_recent
-python -m src.main enrich_history_mid_recent
-python -m src.main integrity_checks_recent
-Offline evaluation
-python -m src.main evaluate_recent
-python -m src.main evaluate_mid_recent
-python -m src.main evaluate_narrow_history_recent_24hchange
-python -m src.main summarize_offline_results
-python -m src.main export_best_24h_coefficients
-python -m src.main build_final_model_report
-Best model training
-python -m src.main train_best_24h_model
-Current Polymarket scoring
-python -m src.main ingest_current
-python -m src.main features_current
-python -m src.main score_current_polymarket_trained
-Current Kalshi scoring
-python -m src.main ingest_kalshi_current
-python -m src.main features_kalshi_current
-python -m src.main score_current_kalshi
-Current monitor and sanity checks
-python -m src.main sanity_check_current_scores
-python -m src.main build_monitor_report
-Testing
-pytest tests/
+---
 
-## Phase 1 Deliverables
+## Current Status
 
-Phase 1 delivers a prediction-market modeling and monitoring prototype with:
+## 1. Forecasting / ML layer
 
-### Core outputs
-- `notebooks/day13_walkthrough.ipynb` — end-to-end walkthrough notebook
-- `reports/final_model_report.md` — summary write-up of the modeling work
-- `reports/current_monitor_report.md` — current monitor snapshot across venues
-- `reports/offline_snapshot_summary.md` — open/mid/24h offline comparison
-- `reports/best_24h_coefficients.md` — best-model coefficient interpretation
+Implemented:
 
-### Core machine-readable artifacts
-- `reports/offline_snapshot_summary.csv`
-- `reports/best_24h_coefficients.csv`
-- `reports/current_polymarket_top_edges_trained.csv`
-- `reports/kalshi_current_top_edges_trained.csv`
-- `reports/best_24h_model.pkl`
+- historical market ingestion and normalisation
+- snapshot feature generation at:
+  - market open
+  - midpoint
+  - 24h-before-close
+- timestamp integrity and leakage checks
+- baseline logistic regression training
+- holdout Brier-score evaluation
+- coefficient / feature interpretation
+- current market scoring for Polymarket and Kalshi
 
-### Core processed datasets
-- `data/processed/features_mid_recent_history_enriched.parquet`
-- `data/processed/features_24h_recent_history_enriched.parquet`
-- `data/processed/current_polymarket_scored_trained.parquet`
-- `data/processed/kalshi_current_scored_trained.parquet`
+Current takeaway:
 
-### Main conclusions
-- The **24h snapshot** is the strongest modeling point.
-- The model beats both naive and market baselines at **mid** and **24h**.
-- **Polymarket** is the cleaner and more trustworthy current-monitor venue.
-- **Kalshi** is integrated and filtered, but should still be treated as exploratory due to cross-venue domain shift.
+- the **24h-before-close snapshot** is the strongest current modelling point
+- the baseline model is only modestly better than market baseline, which is expected for a first logistic model in prediction markets
+- **Polymarket** current scoring is cleaner and more trustworthy
+- **Kalshi** current scoring is integrated but still more exploratory
 
-\## Current Status vs Target Scanner Architecture
+---
 
-This repo currently implements a **Phase 1 modeling and monitoring prototype** for prediction markets.
+## 2. Detector / scanner layer
 
-### Implemented in Phase 1
-- historical market ingestion and normalization
-- snapshot-based feature generation (`open`, `mid`, `24h`)
-- offline model evaluation against naive and market baselines
-- best 24h model training and export
-- current Polymarket scoring
-- current Kalshi scoring (exploratory cross-venue extension)
-- sanity checks and markdown/CSV reporting
-- walkthrough notebook for live explanation
+Implemented:
 
-### Not yet implemented from the original scanner/replay brief
-- cross-venue contract matching
-- executable quote / walk-book pricing
-- fee and slippage-aware edge computation
-- complement and basket constraint checks
-- structured opportunity event logging
-- replay/backtest of logged opportunities
-- continuous scanner loop running every 1–5 minutes
-- false-positive estimation under latency assumptions
+- executable pricing / book-walking
+- fee and slippage-aware cost model
+- cross-venue edge computation
+- complement-sanity edge computation
+- scanner core
+- synthetic cross-venue and complement detection
+- structured JSONL flag logging
+- synthetic and live scanner modes
+- first live Kalshi complement integration
 
-### Repo structure note
-The target scanner architecture includes:
-- `src/detect/` for executable opportunity logic
-- `src/backtest/` for replay / backtest tools
+Current takeaway:
 
-These folders are included now as placeholders so the repo aligns better with the intended end-state, while remaining honest about current Phase 1 scope.
+- detector primitives are now implemented and tested
+- the scanner can emit structured flags and log them
+- first live executable detection has started
+- current **Kalshi snapshot coverage is too sparse** for meaningful long-run executable monitoring at scale
+- the next major step is richer live order-book ingestion, especially for Polymarket and/or a richer Kalshi depth source
 
-## Phase 1 Deliverables
+---
 
-### Walkthrough
-- `notebooks/day13_walkthrough.ipynb`
+## Canonical Repo Structure
 
-### Final written artifacts
-- `reports/final_model_report.md`
-- `reports/current_monitor_report.md`
-- `reports/offline_snapshot_summary.md`
-- `reports/best_24h_coefficients.md`
+```text
+src/
+  ingest/
+  features/
+  detect/
+  backtest/
+  models/
+  utils/
+  experimental/
 
-### Machine-readable artifacts
-- `reports/offline_snapshot_summary.csv`
-- `reports/best_24h_coefficients.csv`
-- `reports/current_polymarket_top_edges_trained.csv`
-- `reports/kalshi_current_top_edges_trained.csv`
-- `reports/best_24h_model.pkl`
+tests/
+configs/
+reports/
+artifacts/
+notebooks/
+data/   # gitignored
 
-### Key processed outputs
-- `data/processed/features_mid_recent_history_enriched.parquet`
-- `data/processed/features_24h_recent_history_enriched.parquet`
-- `data/processed/current_polymarket_scored_trained.parquet`
-- `data/processed/kalshi_current_scored_trained.parquet`
+### Canonical Commands
+These are the main commands that reflect the current working path.
+## Baseline training
 
-### Main conclusions
-- the **24h snapshot** is the strongest modeling point
-- the model beats both naive and market baselines at **mid** and **24h**
-- **Polymarket** is the cleaner and more trustworthy current-monitor venue
-- **Kalshi** is integrated and filtered, but should still be treated as exploratory
+```text
+python -m src.models.baseline_logreg
+
+## Offline evaluation
+
+```text
+python -m src.models.evaluate
+
+## Current market scoring
+
+```text
+python -m src.models.score_current_polymarket
+python -m src.models.score_current_kalshi
+
+## Scanner modes
+
+```text
+python -m src.detect.prediction_scanner --mode synthetic
+python -m src.detect.prediction_scanner --mode live
+python -m src.detect.prediction_scanner --mode live_complement
+
+## Detector module demos
+
+```text
+python -m src.detect.executable_pricing
+python -m src.detect.demo_scanner
+python -m src.detect.logging_runner
+
+## Tests
+
+```text
+pytest tests/ -q
+
+## Key Outputs
+## Reports
+
+- reports/final_model_report.md
+
+- reports/current_monitor_report.md
+
+- reports/offline_snapshot_summary.md
+
+- reports/best_24h_coefficients.md
+
+- reports/week2_live_complement_status.md
+
+## Notebook
+
+- notebooks/day13_walkthrough.ipynb
+
+## Artifacts
+
+- artifacts/models/best_24h_model.pkl
+
+- artifacts/outputs/current_polymarket_top_edges_trained.csv
+
+- artifacts/outputs/kalshi_current_top_edges_trained.csv
+
+- artifacts/outputs/best_24h_coefficients.csv
+
+- artifacts/plots/
+
+## Processed datasets
+
+- data/processed/features_24h_recent_history_enriched.parquet
+
+- data/processed/current_polymarket_scored_trained.parquet
+
+- data/processed/kalshi_current_scored_trained.parquet
+
+- data/processed/polymarket_markets_current.parquet
+
+- data/processed/kalshi_markets_current.parquet
+
+## Testing Coverage
+
+The repo now includes unit-tested detector primitives for:
+
+- executable book-walking
+
+- fee computation
+
+- edge computation
+
+- scanner core
+
+- logging wrapper
+
+- Kalshi live complement adapter
+
+This means the scanner foundation is no longer just conceptual; the core arithmetic and flagging logic are tested and reproducible.
+
+## What Is Completed
+
+At this point, the following are substantially complete:
+
+- Phase 1 historical ingestion and feature-building pipeline
+
+- leakage-safe snapshot generation
+
+- baseline forecasting model training and evaluation
+
+- current scoring for Polymarket and Kalshi
+
+- executable pricing module
+
+- fee and slippage-aware cost model
+
+- edge computation
+
+- synthetic scanner flags
+
+- JSONL flag logging
+
+- scanner entrypoint with multiple modes
+
+- first live executable detector path on Kalshi complement markets
+
+- repo cleanup into a clearer canonical structure
+
+## What Is Still In Progress
+
+The following are the main remaining gaps:
+
+- richer live order-book ingestion for executable detection
+
+- broader real-market live detector coverage
+
+- live complement detection over a meaningfully larger market set
+
+- cross-venue real matched-market detection
+
+- replay / latency-aware validation
+
+- false-positive estimation
+
+- opportunity persistence / half-life analysis
+
+- final end-to-end delivery packaging
+
+## Current Limitation
+
+The most important current blocker is live executable market coverage, not detector logic.
+
+The detector itself is working. The current live Kalshi complement mode shows that:
+
+active binary rows are available
+
+many rows have usable YES-side information
+
+very few rows have enough usable NO-side executable information
+
+as a result, only a very small number of markets are currently eligible for live complement checks
+
+This means the current live executable detector path is valid, but not yet broad enough to justify a meaningful long-run monitored session.
+
+## Recommended Next Step
+
+The highest-value next engineering step is:
+
+upgrade live ingestion to fetch richer executable order-book data, most likely starting with Polymarket order books using clobTokenIds, then building a real live complement detector over that richer book data.
+
+That will unlock:
+
+- larger live executable market coverage
+
+- more meaningful monitored detector runs
+
+- better cross-venue detection potential
+
+eventual replay / validation work on a stronger live opportunity stream
+
+Notes for Reviewers
+
+The easiest ways to review this work today are:
+
+- read the notebook: notebooks/day13_walkthrough.ipynb
+
+- read the reports in reports/
+
+- clone the repo and run the canonical commands above
+
+- inspect the detector logs in logs/
+
+The current repo is intended to be honest about scope:
+
+- the forecasting layer is further along
+
+- the detector-core engineering is now in place
+
+- the main remaining challenge is richer live executable-book ingestion and downstream validation
