@@ -1,0 +1,3 @@
+loop_interval_seconds: 10
+max_cycles: 2
+simulate_kalshi_fail_once: true

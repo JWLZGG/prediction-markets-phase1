@@ -1,14 +1,14 @@
 # Prediction Markets Phase 1
 
-Phase 1 builds a snapshot-based prediction-market modeling and monitoring pipeline.
+Phase 1 builds a snapshot-based prediction-market modelling and monitoring pipeline.
 
 ## Objective
 
-Train on resolved historical markets, compare model performance against market-implied probabilities, select the strongest snapshot timing, and score current live markets.
+Train on resolved historical markets, compare model performance against market-implied probabilities, select the strongest snapshot timing and score current live markets.
 
 ## Main result
 
-The 24h-before-close snapshot is the strongest modeling point in Phase 1.
+The 24h-before-close snapshot is the strongest modelling point in Phase 1.
 
 - Midpoint snapshot adds smaller but positive signal
 - Open snapshot is not currently robust enough
@@ -97,3 +97,64 @@ Phase 1 delivers a prediction-market modeling and monitoring prototype with:
 - The model beats both naive and market baselines at **mid** and **24h**.
 - **Polymarket** is the cleaner and more trustworthy current-monitor venue.
 - **Kalshi** is integrated and filtered, but should still be treated as exploratory due to cross-venue domain shift.
+
+\## Current Status vs Target Scanner Architecture
+
+This repo currently implements a **Phase 1 modeling and monitoring prototype** for prediction markets.
+
+### Implemented in Phase 1
+- historical market ingestion and normalization
+- snapshot-based feature generation (`open`, `mid`, `24h`)
+- offline model evaluation against naive and market baselines
+- best 24h model training and export
+- current Polymarket scoring
+- current Kalshi scoring (exploratory cross-venue extension)
+- sanity checks and markdown/CSV reporting
+- walkthrough notebook for live explanation
+
+### Not yet implemented from the original scanner/replay brief
+- cross-venue contract matching
+- executable quote / walk-book pricing
+- fee and slippage-aware edge computation
+- complement and basket constraint checks
+- structured opportunity event logging
+- replay/backtest of logged opportunities
+- continuous scanner loop running every 1–5 minutes
+- false-positive estimation under latency assumptions
+
+### Repo structure note
+The target scanner architecture includes:
+- `src/detect/` for executable opportunity logic
+- `src/backtest/` for replay / backtest tools
+
+These folders are included now as placeholders so the repo aligns better with the intended end-state, while remaining honest about current Phase 1 scope.
+
+## Phase 1 Deliverables
+
+### Walkthrough
+- `notebooks/day13_walkthrough.ipynb`
+
+### Final written artifacts
+- `reports/final_model_report.md`
+- `reports/current_monitor_report.md`
+- `reports/offline_snapshot_summary.md`
+- `reports/best_24h_coefficients.md`
+
+### Machine-readable artifacts
+- `reports/offline_snapshot_summary.csv`
+- `reports/best_24h_coefficients.csv`
+- `reports/current_polymarket_top_edges_trained.csv`
+- `reports/kalshi_current_top_edges_trained.csv`
+- `reports/best_24h_model.pkl`
+
+### Key processed outputs
+- `data/processed/features_mid_recent_history_enriched.parquet`
+- `data/processed/features_24h_recent_history_enriched.parquet`
+- `data/processed/current_polymarket_scored_trained.parquet`
+- `data/processed/kalshi_current_scored_trained.parquet`
+
+### Main conclusions
+- the **24h snapshot** is the strongest modeling point
+- the model beats both naive and market baselines at **mid** and **24h**
+- **Polymarket** is the cleaner and more trustworthy current-monitor venue
+- **Kalshi** is integrated and filtered, but should still be treated as exploratory

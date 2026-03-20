@@ -6,8 +6,8 @@ import pickle
 import pandas as pd
 
 INPUT_PATH = Path("data/processed/kalshi_current_features.parquet")
-MODEL_PATH = Path("reports/best_24h_model.pkl")
-OUTPUT_CSV_PATH = Path("reports/kalshi_current_top_edges_trained.csv")
+MODEL_PATH = Path("artifacts/models/best_24h_model.pkl")
+OUTPUT_CSV_PATH = Path("artifacts/outputs/kalshi_current_top_edges_trained.csv")
 OUTPUT_PARQUET_PATH = Path("data/processed/kalshi_current_scored_trained.parquet")
 
 

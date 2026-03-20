@@ -7,7 +7,7 @@ import pandas as pd
 from src.utils.io import read_parquet
 
 INPUT_PATH = Path("data/processed/current_polymarket_features.parquet")
-OUTPUT_PATH = Path("reports/current_polymarket_top_edges.csv")
+OUTPUT_PATH = Path("artifacts/outputs/current_polymarket_top_edges.csv")
 
 
 def heuristic_model_score(row: pd.Series) -> float | None:

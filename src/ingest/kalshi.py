@@ -30,7 +30,7 @@ def phase1_status() -> dict:
 
 
 def save_phase1_status_report(
-    output_path: str | Path = "reports/kalshi_phase1_status.json",
+    output_path: str | Path = "artifacts/outputs/kalshi_phase1_status.json",
 ) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)

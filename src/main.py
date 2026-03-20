@@ -39,6 +39,9 @@ from src.models.build_monitor_report import run_build_monitor_report
 from src.models.summarize_offline_results import run_summarize_offline_results
 from src.models.export_best_24h_coefficients import run_export_best_24h_coefficients
 from src.models.build_final_model_report import run_build_final_model_report
+from src.detect.prediction_scanner import get_scanner_status
+from src.backtest.replay_pred import get_replay_status
+from src.detect.prediction_scanner import run_prediction_scanner
 
 def main() -> None:
     if len(sys.argv) < 2:
@@ -124,6 +127,12 @@ def main() -> None:
         run_export_best_24h_coefficients()
     elif command == "build_final_model_report":
         run_build_final_model_report()
+    elif command == "scanner_status":
+        print(get_scanner_status())
+    elif command == "replay_status":
+        print(get_replay_status())
+    elif command == "run_pred":
+        run_prediction_scanner()
     else:
         raise SystemExit(f"Unknown command: {command}")
     

@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 INPUT_PATH = Path("data/processed/features_24h_recent_history_enriched.parquet")
-OUTPUT_CSV = Path("reports/best_24h_coefficients.csv")
+OUTPUT_CSV = Path("artifacts/outputs/best_24h_coefficients.csv")
 OUTPUT_MD = Path("reports/best_24h_coefficients.md")
 
 

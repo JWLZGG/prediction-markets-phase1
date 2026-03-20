@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 INPUT_PATH = Path("data/processed/current_polymarket_features.parquet")
-MODEL_PATH = Path("reports/best_24h_model.pkl")
-OUTPUT_CSV_PATH = Path("reports/current_polymarket_top_edges_trained.csv")
+MODEL_PATH = Path("artifacts/models/best_24h_model.pkl")
+OUTPUT_CSV_PATH = Path("artifacts/outputs/current_polymarket_top_edges_trained.csv")
 OUTPUT_PARQUET_PATH = Path("data/processed/current_polymarket_scored_trained.parquet")
 
 

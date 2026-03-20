@@ -14,11 +14,21 @@ PROCESSED_PATH = Path("data/processed/kalshi_markets_current.parquet")
 BASE_URL = "https://api.elections.kalshi.com/trade-api/v2/markets"
 
 
-def fetch_current_markets(limit: int = 1000) -> list[dict[str, Any]]:
+def fetch_current_markets(
+    limit: int = 1000,
+    max_pages: int = 5,
+    max_markets: int = 5000,
+) -> list[dict[str, Any]]:
     all_markets: list[dict[str, Any]] = []
     cursor = None
+    page_count = 0
 
     while True:
+        if page_count >= max_pages:
+            break
+        if len(all_markets) >= max_markets:
+            break
+
         params = {
             "limit": limit,
             "status": "open",
@@ -32,6 +42,11 @@ def fetch_current_markets(limit: int = 1000) -> list[dict[str, Any]]:
 
         markets = data.get("markets", [])
         all_markets.extend(markets)
+        page_count += 1
+
+        if len(all_markets) >= max_markets:
+            all_markets = all_markets[:max_markets]
+            break
 
         cursor = data.get("cursor")
         if not cursor:
@@ -60,11 +75,19 @@ def normalize_market(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def run_kalshi_current_ingestion() -> None:
+def run_kalshi_current_ingestion(
+    limit: int = 1000,
+    max_pages: int = 5,
+    max_markets: int = 5000,
+) -> None:
     ensure_dir(RAW_DIR)
     ensure_dir(PROCESSED_PATH.parent)
 
-    raw_markets = fetch_current_markets()
+    raw_markets = fetch_current_markets(
+        limit=limit,
+        max_pages=max_pages,
+        max_markets=max_markets,
+    )
     write_json(raw_markets, RAW_DIR / "current_markets.json")
 
     df = pd.DataFrame([normalize_market(m) for m in raw_markets])

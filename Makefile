@@ -9,3 +9,6 @@ features:
 
 test:
 	pytest tests/
+
+run_pred:
+	python -m src.main run_pred

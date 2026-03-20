@@ -1,4 +1,0 @@
-snapshot,rows_used,naive_brier,market_brier,model_brier,bss_vs_naive,bss_vs_market,takeaway
-open,0,,,,,,no usable rows
-mid,431,0.25,0.07303371171693736,0.066848425369768,0.7326062985209281,0.08469083936391142,model beats market
-24h,434,0.25,0.04629036808755761,0.036892184344074555,0.8524312626237018,0.2030267662963171,model beats market

@@ -60,4 +60,4 @@ It needs to establish:
 - Benchmarking and calibration: in place
 - Experiment log: in place
 - Current best result: simple 24h model slightly beats market baseline
-- Main limitation: current feature engineering still relies heavily on market-implied probability, and first-pass history features do not yet add robust incremental edge
+- Main limitation: current feature engineering still relies heavily on market-implied probability and first-pass history features do not yet add robust incremental edge
