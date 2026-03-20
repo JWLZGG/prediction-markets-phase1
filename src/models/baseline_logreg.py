@@ -13,25 +13,66 @@ from sklearn.preprocessing import OneHotEncoder
 
 from src.utils.io import read_parquet
 
-INPUT_PATH = Path("data/processed/features_24h_enriched.parquet")
+INPUT_PATH = Path("data/processed/features_24h_recent_history_enriched.parquet")
 
 
 def run_baseline_model() -> None:
     df = read_parquet(INPUT_PATH).copy()
+    print(f"[INFO] Loaded rows from {INPUT_PATH}: {len(df)}")
+    print(f"[INFO] Columns: {list(df.columns)}")
+
+    if "resolved_outcome" not in df.columns:
+        raise ValueError("resolved_outcome column missing")
+    if "market_implied_prob" not in df.columns:
+        raise ValueError("market_implied_prob column missing")
+
+    print(f"[INFO] Non-null resolved_outcome: {df['resolved_outcome'].notna().sum()}")
+    print(f"[INFO] Non-null market_implied_prob: {df['market_implied_prob'].notna().sum()}")
+
     df = df[df["resolved_outcome"].notna()].copy()
+    print(f"[INFO] After resolved_outcome filter: {len(df)}")
+
     df = df[df["market_implied_prob"].notna()].copy()
+    print(f"[INFO] After market_implied_prob filter: {len(df)}")
+
+    if df.empty:
+        print("[WARN] No rows remain after filtering. Exiting baseline run.")
+        return
+
+    required_cols = [
+        "resolved_outcome",
+        "market_implied_prob",
+        "category_fallback",
+        "duration_hours",
+        "volume_num",
+        "history_points_count",
+        "prob_change_24h",
+    ]
+
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
 
     y = df["resolved_outcome"].astype(int)
 
     feature_cols = [
-        "category",
+        "category_fallback",
         "duration_hours",
         "market_implied_prob",
+        "volume_num",
+        "history_points_count",
+        "prob_change_24h",
     ]
     X = df[feature_cols].copy()
 
-    numeric_features = ["duration_hours", "market_implied_prob"]
-    categorical_features = ["category"]
+    numeric_features = [
+        "duration_hours",
+        "market_implied_prob",
+        "volume_num",
+        "history_points_count",
+        "prob_change_24h",
+    ]
+    categorical_features = ["category_fallback"]
 
     numeric_transformer = Pipeline(
         steps=[
@@ -59,6 +100,14 @@ def run_baseline_model() -> None:
             ("classifier", LogisticRegression(max_iter=1000, random_state=42)),
         ]
     )
+
+    if len(df) < 10:
+        print(f"[WARN] Not enough rows to train/test split: {len(df)}")
+        return
+
+    if y.nunique() < 2:
+        print("[WARN] Need at least two classes in resolved_outcome.")
+        return
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -96,10 +145,10 @@ def run_baseline_model() -> None:
     ).sort_values("coefficient", ascending=False)
 
     print("\n[INFO] Top positive coefficients:")
-    print(coef_df.head(10).to_string(index=False))
+    positive_df = coef_df.sort_values("coefficient", ascending=False).head(10)
 
     print("\n[INFO] Top negative coefficients:")
-    print(coef_df.tail(10).to_string(index=False))
+    negative_df = coef_df.sort_values("coefficient", ascending=True).head(10)
 
 
 if __name__ == "__main__":
