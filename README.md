@@ -101,6 +101,7 @@ reports/
 artifacts/
 notebooks/
 data/   # gitignored
+```
 
 ### Canonical Commands
 These are the main commands that reflect the current working path.
@@ -108,17 +109,20 @@ These are the main commands that reflect the current working path.
 
 ```text
 python -m src.models.baseline_logreg
+```
 
 ## Offline evaluation
 
 ```text
 python -m src.models.evaluate
+```
 
 ## Current market scoring
 
 ```text
 python -m src.models.score_current_polymarket
 python -m src.models.score_current_kalshi
+```
 
 ## Scanner modes
 
@@ -126,6 +130,7 @@ python -m src.models.score_current_kalshi
 python -m src.detect.prediction_scanner --mode synthetic
 python -m src.detect.prediction_scanner --mode live
 python -m src.detect.prediction_scanner --mode live_complement
+```
 
 ## Detector module demos
 
@@ -133,11 +138,13 @@ python -m src.detect.prediction_scanner --mode live_complement
 python -m src.detect.executable_pricing
 python -m src.detect.demo_scanner
 python -m src.detect.logging_runner
+```
 
 ## Tests
 
 ```text
 pytest tests/ -q
+```
 
 ## Key Outputs
 ## Reports
