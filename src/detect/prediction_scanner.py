@@ -13,6 +13,8 @@ import yaml
 from src.ingest.polymarket_current import run_polymarket_current_ingestion
 from src.ingest.kalshi_current import run_kalshi_current_ingestion
 from src.utils.retry import retry_call
+from src.detect.logging_runner import build_synthetic_flags, write_flags_jsonl
+from src.detect.kalshi_live_complement import scan_kalshi_complements
 
 
 CONFIG_PATH = Path("configs/prediction_scanner.yaml")
@@ -27,6 +29,30 @@ class ScannerStatus:
     implemented_now: list[str]
     next_steps: list[str]
 
+def run_prediction_scanner_synthetic() -> None:
+    print("[INFO] Starting prediction scanner in synthetic mode")
+
+    flags = build_synthetic_flags()
+    write_flags_jsonl(flags)
+
+    print(f"[OK] Synthetic mode produced {len(flags)} flags")
+    for flag in flags:
+        print(flag)
+
+def run_prediction_scanner_live_complement() -> None:
+    print("[INFO] Starting prediction scanner in live_complement mode")
+
+    flags, stats = scan_kalshi_complements(target_size=1.0, threshold_bps=10.0)
+
+    print(f"[INFO] Live complement stats: {stats}")
+
+    if flags:
+        write_flags_jsonl(flags)
+        print(f"[OK] Live complement mode produced {len(flags)} flags")
+        for flag in flags[:10]:
+            print(flag)
+    else:
+        print("[INFO] No live complement flags emitted")
 
 def get_scanner_status() -> ScannerStatus:
     return ScannerStatus(
@@ -173,7 +199,7 @@ def run_one_cycle(config: dict[str, Any], cycle_index: int) -> ScannerRunEvent:
     return event
 
 
-def run_prediction_scanner() -> None:
+def run_prediction_scanner_live() -> None:
     config = load_config()
     loop_interval_seconds = int(config.get("loop_interval_seconds", 300))
     max_cycles = int(config.get("max_cycles", 6))
@@ -205,5 +231,27 @@ def run_prediction_scanner() -> None:
     print("\n[OK] Prediction scanner finished")
 
 
+def run_prediction_scanner(mode: str = "live") -> None:
+    if mode == "synthetic":
+        run_prediction_scanner_synthetic()
+    elif mode == "live":
+        run_prediction_scanner_live()
+    elif mode == "live_complement":
+        run_prediction_scanner_live_complement()
+    else:
+        raise ValueError(f"Unknown scanner mode: {mode}")
+
+
 if __name__ == "__main__":
-    run_prediction_scanner()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "--mode",
+    choices=["live", "synthetic", "live_complement"],
+    default="live",
+    help="Scanner mode: live ingestion loop, deterministic synthetic demo, or live Kalshi complement scan",
+)
+    args = parser.parse_args()
+
+    run_prediction_scanner(mode=args.mode)
