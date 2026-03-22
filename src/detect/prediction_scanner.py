@@ -10,6 +10,7 @@ from typing import Any
 import pandas as pd
 import yaml
 
+from src.detect.polymarket_live_complement import scan_polymarket_complements
 from src.ingest.polymarket_current import run_polymarket_current_ingestion
 from src.ingest.kalshi_current import run_kalshi_current_ingestion
 from src.utils.retry import retry_call
@@ -28,6 +29,24 @@ class ScannerStatus:
     phase: str
     implemented_now: list[str]
     next_steps: list[str]
+
+def run_prediction_scanner_live_complement_polymarket() -> None:
+    print("[INFO] Starting prediction scanner in live_complement_polymarket mode")
+
+    flags, stats = scan_polymarket_complements(
+        target_size=10.0,
+        threshold_bps=10.0,
+    )
+
+    print(f"[INFO] Live Polymarket complement stats: {stats}")
+
+    if flags:
+        write_flags_jsonl(flags)
+        print(f"[OK] Live Polymarket complement mode produced {len(flags)} flags")
+        for flag in flags[:10]:
+            print(flag)
+    else:
+        print("[INFO] No live Polymarket complement flags emitted")
 
 def run_prediction_scanner_synthetic() -> None:
     print("[INFO] Starting prediction scanner in synthetic mode")
@@ -238,6 +257,8 @@ def run_prediction_scanner(mode: str = "live") -> None:
         run_prediction_scanner_live()
     elif mode == "live_complement":
         run_prediction_scanner_live_complement()
+    elif mode == "live_complement_polymarket":
+        run_prediction_scanner_live_complement_polymarket()
     else:
         raise ValueError(f"Unknown scanner mode: {mode}")
 
@@ -248,7 +269,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
     "--mode",
-    choices=["live", "synthetic", "live_complement"],
+    choices=["live", "synthetic", "live_complement", "live_complement_polymarket"],
     default="live",
     help="Scanner mode: live ingestion loop, deterministic synthetic demo, or live Kalshi complement scan",
 )
