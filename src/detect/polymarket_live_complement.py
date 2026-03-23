@@ -109,9 +109,8 @@ def pair_market_books(df: pd.DataFrame) -> list[dict[str, Any]]:
 
         yes_asks = _normalize_levels(yes_row.get("asks"))
         no_asks = _normalize_levels(no_row.get("asks"))
-        if len(paired) == 0:
-    
-            paired.append(
+
+        paired.append(
             {
                 "market_id": str(market_id),
                 "question": yes_row.get("question"),
