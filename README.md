@@ -146,6 +146,23 @@ python -m src.detect.logging_runner
 pytest tests/ -q
 ```
 
+### ML / evaluation
+- `python -m src.models.baseline_logreg`
+- `python -m src.models.evaluate`
+- `python -m src.models.score_current_polymarket`
+- `python -m src.models.score_current_kalshi`
+
+### Scanner modes
+- `python -m src.detect.prediction_scanner --mode synthetic`
+- `python -m src.detect.prediction_scanner --mode live`
+- `python -m src.detect.prediction_scanner --mode live_complement`
+- `python -m src.detect.prediction_scanner --mode live_complement_polymarket`
+
+### Ingestion helpers
+- `python -m src.ingest.polymarket_current`
+- `python -m src.ingest.kalshi_current`
+- `python -m src.ingest.polymarket_orderbook`
+
 ## Key Outputs
 ## Reports
 
@@ -205,6 +222,40 @@ The repo now includes unit-tested detector primitives for:
 
 This means the scanner foundation is no longer just conceptual; the core arithmetic and flagging logic are tested and reproducible.
 
+## JSONL logs
+
+### Run log
+Path:
+- `logs/prediction_scanner_runs.jsonl`
+
+Fields include:
+- timestamp / cycle timing
+- cycle index
+- polymarket_ok / kalshi_ok
+- row counts
+- output paths
+- error message if any
+
+### Flag log
+Path:
+- `logs/prediction_scanner_flags.jsonl`
+
+Fields include:
+- timestamp
+- source
+- flag_type
+- market_id
+- venue_a / venue_b
+- target_size
+- details:
+  - executable prices
+  - notionals
+  - gross edge
+  - total cost
+  - net edge
+  - net edge bps
+  - should_flag
+
 ## What Is Completed
 
 At this point, the following are substantially complete:
@@ -224,8 +275,6 @@ At this point, the following are substantially complete:
 - edge computation
 
 - synthetic scanner flags
-
-- JSONL flag logging
 
 - scanner entrypoint with multiple modes
 
