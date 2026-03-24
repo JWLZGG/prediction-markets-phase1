@@ -11,6 +11,7 @@ from src.detect.executable_pricing import (
 )
 from src.detect.fees import compute_fee_breakdown, compute_notional
 
+
 def _r(x: float, ndigits: int = 6) -> float:
     return round(float(x), ndigits)
 
@@ -22,7 +23,9 @@ class ScannerFlag:
     venue_a: str
     venue_b: str | None
     target_size: float
+    threshold_bps: float
     details: dict[str, Any]
+    inputs: dict[str, Any]
 
 
 def _build_cross_venue_details(
@@ -34,6 +37,8 @@ def _build_cross_venue_details(
     sell_result: ExecutionResult,
     total_cost_per_unit: float,
     threshold_bps: float,
+    buy_asks: list[dict],
+    sell_bids: list[dict],
 ) -> ScannerFlag | None:
     if not buy_result.executable:
         return None
@@ -58,6 +63,7 @@ def _build_cross_venue_details(
         venue_a=buy_venue,
         venue_b=sell_venue,
         target_size=target_size,
+        threshold_bps=threshold_bps,
         details={
             "buy_avg_price": _r(buy_result.avg_price, 6),
             "sell_avg_price": _r(sell_result.avg_price, 6),
@@ -71,7 +77,11 @@ def _build_cross_venue_details(
             "net_edge_bps": _r(edge_result.net_edge_bps, 2),
             "should_flag": edge_result.should_flag,
         },
-        )
+        inputs={
+            "buy_asks": buy_asks,
+            "sell_bids": sell_bids,
+        },
+    )
 
 
 def scan_cross_venue_market(
@@ -117,6 +127,8 @@ def scan_cross_venue_market(
         sell_result=sell_result,
         total_cost_per_unit=total_cost_per_unit,
         threshold_bps=threshold_bps,
+        buy_asks=buy_asks,
+        sell_bids=sell_bids,
     )
 
 
@@ -169,17 +181,22 @@ def scan_complement_market(
         venue_a=venue,
         venue_b=None,
         target_size=target_size,
+        threshold_bps=threshold_bps,
         details={
-            "yes_buy_avg_price": yes_result.avg_price,
-            "no_buy_avg_price": no_result.avg_price,
+            "yes_buy_avg_price": _r(yes_result.avg_price, 6),
+            "no_buy_avg_price": _r(no_result.avg_price, 6),
             "yes_levels_used": yes_result.levels_used,
             "no_levels_used": no_result.levels_used,
-            "gross_edge": edge_result.gross_edge,
-            "total_cost": edge_result.total_cost,
-            "net_edge": edge_result.net_edge,
-            "net_edge_bps": edge_result.net_edge_bps,
+            "gross_edge": _r(edge_result.gross_edge, 6),
+            "total_cost": _r(edge_result.total_cost, 6),
+            "net_edge": _r(edge_result.net_edge, 6),
+            "net_edge_bps": _r(edge_result.net_edge_bps, 2),
             "should_flag": edge_result.should_flag,
-        }
+        },
+        inputs={
+            "yes_asks": yes_asks,
+            "no_asks": no_asks,
+        },
     )
 
 

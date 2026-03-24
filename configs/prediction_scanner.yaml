@@ -1,5 +1,5 @@
 loop_interval_seconds: 60
-max_cycles: 120
+max_cycles: 360
 kalshi_max_markets: 3000
 simulate_kalshi_fail_once: false
 

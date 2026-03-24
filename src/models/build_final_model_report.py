@@ -54,6 +54,7 @@ def run_build_final_model_report() -> None:
         "\n## 7. Interpretation\n",
         "- Offline results suggest the model adds the most value close to resolution.\n"
         "- The 24h snapshot beats both naive and market baselines in the current evaluation summary.\n"
+        "- Open now works under a practical first-observed-within-24h definition, while the strict 60-minute open frame is largely unsupported by the current history API.\n"
         "- Current Polymarket outputs are the most presentation-ready monitor leg.\n"
         "- Kalshi outputs are useful for exploratory discrepancy ranking, especially after filtering and confidence banding, but still show many suspicious extremes.\n",
 
@@ -61,6 +62,7 @@ def run_build_final_model_report() -> None:
         "- Cross-venue scoring from a Polymarket-trained model to Kalshi is not a fully validated production setup.\n"
         "- Large edges on low-volume or lower-confidence rows should not be treated as strong signals without additional review.\n"
         "- Category heuristics are still lightweight and may misclassify some contracts.\n",
+        "- The history endpoint is too sparse to support a strict 60-minute open snapshot definition at scale, so open results use a practical first-observed-within-24h proxy.\n"
 
         "## 9. Recommended next steps\n",
         "- Add venue-specific historical training for Kalshi if historical data becomes available.\n"
