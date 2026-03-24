@@ -1,0 +1,6 @@
+data_dir: data
+timezone: UTC
+min_markets: 100
+snapshot_tolerance_minutes: 60
+holdout_size: 30
+random_seed: 42

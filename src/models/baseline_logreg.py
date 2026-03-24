@@ -146,9 +146,11 @@ def run_baseline_model() -> None:
 
     print("\n[INFO] Top positive coefficients:")
     positive_df = coef_df.sort_values("coefficient", ascending=False).head(10)
+    print(positive_df.to_string(index=False))
 
     print("\n[INFO] Top negative coefficients:")
     negative_df = coef_df.sort_values("coefficient", ascending=True).head(10)
+    print(negative_df.to_string(index=False))
 
 
 if __name__ == "__main__":

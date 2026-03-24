@@ -44,7 +44,7 @@ def enrich_file(input_path: Path, output_path: Path) -> None:
     probs = []
     for i, row in df.iterrows():
         token_id = row["market_token_id"]
-        target_ts = row["target_ts"]
+        target_ts = row["snapshot_ts"]
 
         if token_id is None or pd.isna(target_ts):
             probs.append(None)

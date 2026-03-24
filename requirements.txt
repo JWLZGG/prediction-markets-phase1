@@ -9,3 +9,9 @@ python-dotenv
 pytest
 jupyter
 ipykernel
+
+duckdb
+
+seaborn
+
+pydantic

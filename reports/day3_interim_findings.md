@@ -139,6 +139,7 @@ This means a true open snapshot is not currently observable from the available h
 ## What is now working
 I built a recent-market research pipeline for resolved Polymarket binary markets that:
 
+
 - ingests and cleans recent resolved markets
 - labels binary outcomes
 - creates snapshot datasets at:

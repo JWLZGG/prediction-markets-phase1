@@ -69,14 +69,18 @@ def build_synthetic_flags() -> list[dict]:
     return flags
 
 
-def write_flags_jsonl(flags: list[dict], log_path: Path = LOG_PATH) -> None:
+def write_flags_jsonl(
+    flags: list[dict],
+    log_path: Path = LOG_PATH,
+    source: str = "synthetic_demo",
+) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     with log_path.open("a", encoding="utf-8") as f:
         for flag in flags:
             record = {
                 "timestamp": _now_iso(),
-                "source": "synthetic_demo",
+                "source": source,
                 **flag,
             }
             f.write(json.dumps(record) + "\n")
@@ -84,7 +88,7 @@ def write_flags_jsonl(flags: list[dict], log_path: Path = LOG_PATH) -> None:
 
 def main() -> None:
     flags = build_synthetic_flags()
-    write_flags_jsonl(flags)
+    write_flags_jsonl(flags, source="synthetic_demo")
     print(f"[OK] Wrote {len(flags)} flags to {LOG_PATH}")
 
 

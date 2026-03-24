@@ -19,5 +19,5 @@ def test_normalize_side_filters_bad_rows():
         {"price": "0.43", "size": "0"},
         {"price": None, "size": "5"},
     ]
-    result = _normalize_side(levels)
+    result = _normalize_side(levels, side="asks")
     assert result == [{"price": 0.42, "size": 10.0}]

@@ -64,14 +64,25 @@ def load_snapshot(path: Path) -> pd.DataFrame:
     if "volume" in df.columns and "log_volume" not in df.columns:
         df["log_volume"] = np.log1p(pd.to_numeric(df["volume"], errors="coerce"))
 
+    if "liquidity" in df.columns and "log_liquidity" not in df.columns:
+        df["log_liquidity"] = np.log1p(pd.to_numeric(df["liquidity"], errors="coerce"))
+
     if "market_implied_prob" in df.columns and "distance_from_0_5" not in df.columns:
-        df["distance_from_0_5"] = (pd.to_numeric(df["market_implied_prob"], errors="coerce") - 0.5).abs()
+        df["distance_from_0_5"] = (
+            pd.to_numeric(df["market_implied_prob"], errors="coerce") - 0.5
+        ).abs()
 
     if "prob_change_24h" not in df.columns:
         df["prob_change_24h"] = 0.0
 
     if "history_points_count" not in df.columns:
         df["history_points_count"] = 0.0
+
+    if "minutes_from_open_to_snapshot" not in df.columns:
+        df["minutes_from_open_to_snapshot"] = np.nan
+
+    if "strict_open_available_60m" not in df.columns:
+        df["strict_open_available_60m"] = False
 
     return df
 
@@ -81,6 +92,8 @@ def evaluate_snapshot(snapshot_name: str, path: Path) -> dict:
         return {
             "snapshot": snapshot_name,
             "rows_used": 0,
+            "strict_open_rows_60m": np.nan,
+            "avg_minutes_from_open_to_snapshot": np.nan,
             "naive_brier": np.nan,
             "market_brier": np.nan,
             "model_brier": np.nan,
@@ -91,18 +104,6 @@ def evaluate_snapshot(snapshot_name: str, path: Path) -> dict:
 
     df = load_snapshot(path)
 
-    required = [
-        "resolved_outcome",
-        "market_implied_prob",
-        "category_fallback",
-        "duration_hours",
-        "log_volume",
-        "distance_from_0_5",
-        "prob_change_24h",
-        "history_points_count",
-    ]
-    present_required = [c for c in required if c in df.columns]
-
     df = df[df["resolved_outcome"].notna()].copy()
     df = df[df["market_implied_prob"].notna()].copy()
 
@@ -110,6 +111,8 @@ def evaluate_snapshot(snapshot_name: str, path: Path) -> dict:
         return {
             "snapshot": snapshot_name,
             "rows_used": 0,
+            "strict_open_rows_60m": np.nan,
+            "avg_minutes_from_open_to_snapshot": np.nan,
             "naive_brier": np.nan,
             "market_brier": np.nan,
             "model_brier": np.nan,
@@ -123,9 +126,11 @@ def evaluate_snapshot(snapshot_name: str, path: Path) -> dict:
             "duration_hours",
             "market_implied_prob",
             "log_volume",
+            "log_liquidity",
             "distance_from_0_5",
             "prob_change_24h",
             "history_points_count",
+            "minutes_from_open_to_snapshot",
         ] if c in df.columns
     ]
     categorical_features = [c for c in ["category_fallback"] if c in df.columns]
@@ -154,9 +159,23 @@ def evaluate_snapshot(snapshot_name: str, path: Path) -> dict:
     else:
         takeaway = "tie vs market"
 
+    strict_open_rows_60m = (
+        int(df["strict_open_available_60m"].fillna(False).sum())
+        if snapshot_name == "open" and "strict_open_available_60m" in df.columns
+        else np.nan
+    )
+
+    avg_minutes_from_open = (
+        float(pd.to_numeric(df["minutes_from_open_to_snapshot"], errors="coerce").mean())
+        if snapshot_name == "open" and "minutes_from_open_to_snapshot" in df.columns
+        else np.nan
+    )
+
     return {
         "snapshot": snapshot_name,
         "rows_used": int(len(df)),
+        "strict_open_rows_60m": strict_open_rows_60m,
+        "avg_minutes_from_open_to_snapshot": avg_minutes_from_open,
         "naive_brier": float(naive_brier),
         "market_brier": float(market_brier),
         "model_brier": float(model_brier),
@@ -203,6 +222,10 @@ def run_summarize_offline_results() -> None:
     md_parts = [
         "# Offline Snapshot Summary\n",
         "This compares naive, market, and model Brier scores across open, mid, and 24h snapshots.\n",
+        "\n",
+        "Open is reported using the practical v1 definition: first available observed price within 24 hours of market creation.\n",
+        "A strict 60-minute open definition is retained as a diagnostic only, and current history data supports very few such rows.\n",
+        "\n",
         markdown_table(out_df),
         "\n",
     ]

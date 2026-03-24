@@ -7,13 +7,33 @@ from typing import Any
 
 import pandas as pd
 
+from src.detect.executable_pricing import get_executable_buy_price
 from src.detect.scanner_core import flag_to_dict, scan_complement_market
 
 POLYMARKET_ORDERBOOKS_PATH = Path("data/processed/polymarket_orderbooks_current.parquet")
 
 
+EXPECTED_COLUMNS = [
+    "market_id",
+    "question",
+    "token_id",
+    "token_side",
+    "bids",
+    "asks",
+    "raw_book",
+]
+
 def load_polymarket_orderbooks(path: Path = POLYMARKET_ORDERBOOKS_PATH) -> pd.DataFrame:
-    return pd.read_parquet(path).copy()
+    if not path.exists():
+        return pd.DataFrame(columns=EXPECTED_COLUMNS)
+
+    df = pd.read_parquet(path).copy()
+
+    for col in EXPECTED_COLUMNS:
+        if col not in df.columns:
+            df[col] = None
+
+    return df[EXPECTED_COLUMNS].copy()
 
 
 def _normalize_levels(levels: Any) -> list[dict[str, float]]:
@@ -90,6 +110,13 @@ def _normalize_levels(levels: Any) -> list[dict[str, float]]:
 
 
 def pair_market_books(df: pd.DataFrame) -> list[dict[str, Any]]:
+    if df.empty:
+        return []
+
+    required = {"market_id", "token_side", "token_id", "question", "asks"}
+    if not required.issubset(df.columns):
+        return []
+
     paired: list[dict[str, Any]] = []
 
     grouped = df.groupby("market_id", dropna=False)
@@ -172,10 +199,10 @@ def scan_polymarket_complements(
         if not has_yes or not has_no:
             continue
 
-        top_yes_size = float(market["yes_asks"][0]["size"])
-        top_no_size = float(market["no_asks"][0]["size"])
+        yes_execution = get_executable_buy_price(market["yes_asks"], target_size=target_size)
+        no_execution = get_executable_buy_price(market["no_asks"], target_size=target_size)
 
-        if top_yes_size < target_size or top_no_size < target_size:
+        if not yes_execution.executable or not no_execution.executable:
             continue
 
         stats["sufficient_size"] += 1

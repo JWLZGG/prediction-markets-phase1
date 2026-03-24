@@ -41,7 +41,7 @@ def run_build_final_model_report() -> None:
         "## 3. Key conclusions\n",
         "- The 24h-before-close snapshot is the strongest offline setting.\n"
         "- Midpoint retains some signal, but is weaker than 24h.\n"
-        "- Open is not currently robust in the evaluation frame.\n"
+        "- A strict 60-minute open definition is not supported by the current history source, but a practical open definition using the first observed point within 24 hours is now operational and beats the market baseline offline.\n"
         "- Polymarket current scoring is cleaner because it is closer to the model’s training domain.\n"
         "- Kalshi current scoring works as an exploratory cross-venue monitor, but remains noisier and should be interpreted cautiously.\n",
 

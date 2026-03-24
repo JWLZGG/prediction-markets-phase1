@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.features.enrich_market_probs_generic import enrich_file
+from src.experimental.features.enrich_market_probs_generic import enrich_file
 
 
 def enrich_market_probs_recent() -> None:

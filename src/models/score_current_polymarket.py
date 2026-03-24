@@ -57,6 +57,7 @@ def run_score_current_polymarket() -> None:
         "abs_edge",
     ]
 
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     ranked[keep_cols].head(50).to_csv(OUTPUT_PATH, index=False)
 
     print(f"[OK] Wrote ranked current markets to {OUTPUT_PATH}")
@@ -64,5 +65,5 @@ def run_score_current_polymarket() -> None:
     print(ranked[keep_cols].head(10).to_string(index=False))
 
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     run_score_current_polymarket()

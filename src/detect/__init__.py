@@ -1,0 +1,1 @@
+"""Detection logic for prediction-market opportunities."""

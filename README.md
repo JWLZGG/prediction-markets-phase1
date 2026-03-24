@@ -9,6 +9,7 @@ The repo currently contains two working layers:
 
 1. a **historical forecasting / ML pipeline**
 2. a **detector / scanner core** for executable opportunity logic
+3. a **basic replay/reporting layer** over scanner logs
 
 ---
 
@@ -23,6 +24,7 @@ It has since expanded into a scanner prototype with:
 - edge computation
 - structured JSONL logging
 - synthetic and live scanner modes
+- log replay summaries over scanner outputs
 
 The current state is best described as:
 
@@ -130,6 +132,8 @@ python -m src.models.score_current_kalshi
 python -m src.detect.prediction_scanner --mode synthetic
 python -m src.detect.prediction_scanner --mode live
 python -m src.detect.prediction_scanner --mode live_complement
+python -m src.detect.prediction_scanner --mode live_complement_polymarket
+python -m src.detect.prediction_scanner --mode live_complement_polymarket_loop
 ```
 
 ## Detector module demos
@@ -138,6 +142,7 @@ python -m src.detect.prediction_scanner --mode live_complement
 python -m src.detect.executable_pricing
 python -m src.detect.demo_scanner
 python -m src.detect.logging_runner
+python -m src.backtest.replay_pred
 ```
 
 ## Tests
@@ -157,11 +162,13 @@ pytest tests/ -q
 - `python -m src.detect.prediction_scanner --mode live`
 - `python -m src.detect.prediction_scanner --mode live_complement`
 - `python -m src.detect.prediction_scanner --mode live_complement_polymarket`
+- `python -m src.detect.prediction_scanner --mode live_complement_polymarket_loop`
 
 ### Ingestion helpers
 - `python -m src.ingest.polymarket_current`
 - `python -m src.ingest.kalshi_current`
 - `python -m src.ingest.polymarket_orderbook`
+- `python -m src.backtest.replay_pred`
 
 ## Key Outputs
 ## Reports
@@ -295,6 +302,7 @@ The following are the main remaining gaps:
 - cross-venue real matched-market detection
 
 - replay / latency-aware validation
+- basic replay summaries over logged scanner output
 
 - false-positive estimation
 

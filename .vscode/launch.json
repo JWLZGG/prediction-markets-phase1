@@ -1,0 +1,57 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Prediction Scanner (synthetic)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.detect.prediction_scanner",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": true,
+      "args": ["--mode", "synthetic"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Prediction Scanner (live)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.detect.prediction_scanner",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": true,
+      "args": ["--mode", "live"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Prediction Scanner (Polymarket complement)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.detect.prediction_scanner",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": true,
+      "args": ["--mode", "live_complement_polymarket"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Prediction Scanner (Polymarket complement loop)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.detect.prediction_scanner",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": true,
+      "args": ["--mode", "live_complement_polymarket_loop"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

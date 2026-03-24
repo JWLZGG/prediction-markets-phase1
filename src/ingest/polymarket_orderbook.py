@@ -16,6 +16,16 @@ PROCESSED_PATH = Path("data/processed/polymarket_orderbooks_current.parquet")
 # Polymarket CLOB endpoint
 CLOB_BOOK_URL = "https://clob.polymarket.com/book"
 
+ORDERBOOK_COLUMNS = [
+    "market_id",
+    "question",
+    "token_id",
+    "token_side",
+    "bids",
+    "asks",
+    "raw_book",
+]
+
 
 def _parse_raw_market(raw_market: Any) -> dict[str, Any]:
     if isinstance(raw_market, dict):
@@ -59,7 +69,7 @@ def fetch_orderbook(token_id: str) -> dict[str, Any]:
     return response.json()
 
 
-def _normalize_side(levels: Any) -> list[dict[str, float]]:
+def _normalize_side(levels: Any, side: str) -> list[dict[str, float]]:
     if not isinstance(levels, list):
         return []
 
@@ -85,6 +95,11 @@ def _normalize_side(levels: Any) -> list[dict[str, float]]:
             "size": size_f,
         })
 
+    if side == "bids":
+        normalized.sort(key=lambda x: x["price"], reverse=True)
+    else:
+        normalized.sort(key=lambda x: x["price"])
+
     return normalized
 
 
@@ -95,8 +110,8 @@ def normalize_orderbook(
     token_side: str,
     raw_book: dict[str, Any],
 ) -> dict[str, Any]:
-    bids = _normalize_side(raw_book.get("bids"))
-    asks = _normalize_side(raw_book.get("asks"))
+    bids = _normalize_side(raw_book.get("bids"), side="bids")
+    asks = _normalize_side(raw_book.get("asks"), side="asks")
 
     return {
         "market_id": market_id,
@@ -169,7 +184,7 @@ def run_polymarket_orderbook_ingestion(limit_markets: int | None = 100) -> None:
 
     write_json(raw_books, RAW_DIR / "current_orderbooks.json")
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(rows, columns=ORDERBOOK_COLUMNS)
     write_parquet(df, PROCESSED_PATH)
 
     print(f"[OK] Saved raw orderbook payloads to {RAW_DIR / 'current_orderbooks.json'}")

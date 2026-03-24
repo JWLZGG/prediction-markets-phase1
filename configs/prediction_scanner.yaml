@@ -1,5 +1,5 @@
-loop_interval_seconds: 10
-max_cycles: 2
+loop_interval_seconds: 60
+max_cycles: 120
 kalshi_max_markets: 3000
 simulate_kalshi_fail_once: false
 
@@ -17,3 +17,8 @@ venues:
 scanner:
   min_edge_bps: 100
   default_target_size: 100
+
+log_path_complement_polymarket: logs/polymarket_complement_runs.jsonl
+polymarket_orderbook_limit_markets: 100
+polymarket_complement_target_size: 10.0
+polymarket_complement_threshold_bps: 10.0
