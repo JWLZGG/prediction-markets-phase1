@@ -1,0 +1,9 @@
+pairs:
+  - pair_id: btc_above_100k_year_end
+    label: BTC above 100k by year end
+    polymarket:
+      market_id: "REAL_POLYMARKET_ID"
+      side: "yes"
+    kalshi:
+      ticker: "REAL_KALSHI_TICKER"
+      side: "yes"

@@ -9,7 +9,7 @@ The repo currently contains two working layers:
 
 1. a **historical forecasting / ML pipeline**
 2. a **detector / scanner core** for executable opportunity logic
-3. a **basic replay/reporting layer** over scanner logs
+3. a **basic replay/reporting layer** over scanner logs, including deterministic replay and a latency-labelled replay scaffold
 
 ---
 
@@ -32,6 +32,10 @@ The current state is best described as:
 - **detector primitives: working**
 - **first live executable detection: working, but coverage-limited**
 - **replay and larger-scale live executable monitoring: still in progress**
+- **replay Phase A: working**
+- **latency-labelled replay scaffold: working**
+- **true observed-state latency replay: still in progress**
+- **larger-scale live executable monitoring: still in progress**
 
 ---
 
@@ -51,6 +55,13 @@ Implemented:
 - holdout Brier-score evaluation
 - coefficient / feature interpretation
 - current market scoring for Polymarket and Kalshi
+
+Open-window evaluation now uses two definitions:
+
+- strict open: first observed price within 60 minutes of market creation
+- practical open: first observed price within 24 hours of market creation
+
+The strict 60-minute definition is largely unsupported by the current history endpoint, so the practical definition is used for the current open evaluation pipeline.
 
 Current takeaway:
 
@@ -74,6 +85,9 @@ Implemented:
 - structured JSONL flag logging
 - synthetic and live scanner modes
 - first live Kalshi complement integration
+- richer flag logging with raw detector inputs for replay
+- deterministic replay of logged flags
+- latency-labelled deterministic proxy replay at 250ms / 1s/ 3s
 
 Current takeaway:
 
@@ -168,7 +182,7 @@ pytest tests/ -q
 - `python -m src.ingest.polymarket_current`
 - `python -m src.ingest.kalshi_current`
 - `python -m src.ingest.polymarket_orderbook`
-- `python -m src.backtest.replay_pred`
+- `python -m src.backtest.replay_pred` - Replay v1 applies latency penalties to logged opportunities and estimates whether edge survives delayed execution
 
 ## Key Outputs
 ## Reports
@@ -262,6 +276,12 @@ Fields include:
   - net edge
   - net edge bps
   - should_flag
+- threshopld bps
+- inputs:
+  - buy_asks / sell_bids for cross-venue flags 
+  - yes_asks / no_asks for complement flags
+
+
 
 ## What Is Completed
 
@@ -289,6 +309,14 @@ At this point, the following are substantially complete:
 
 - repo cleanup into a clearer canonical structure
 
+- practical open-window snapshot pipeline and evaluation
+
+- deterministic replay from logged detector inputs
+
+- latency-labelled replay scaffold (250ms / 1s / 3s) using deterministic proxy recomputation
+
+- richer flag logging schema for replay
+
 ## What Is Still In Progress
 
 The following are the main remaining gaps:
@@ -301,8 +329,11 @@ The following are the main remaining gaps:
 
 - cross-venue real matched-market detection
 
-- replay / latency-aware validation
-- basic replay summaries over logged scanner output
+- true observed-state replay / latency-aware validation
+
+- later-snapshot linkage for replay at t + latency
+
+- false-positive estimation from later observed market states
 
 - false-positive estimation
 

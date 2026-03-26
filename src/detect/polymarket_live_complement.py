@@ -9,6 +9,7 @@ import pandas as pd
 
 from src.detect.executable_pricing import get_executable_buy_price
 from src.detect.scanner_core import flag_to_dict, scan_complement_market
+from src.config.scanner_fee_config import get_default_fee_config
 
 POLYMARKET_ORDERBOOKS_PATH = Path("data/processed/polymarket_orderbooks_current.parquet")
 
@@ -158,15 +159,7 @@ def scan_polymarket_complements(
     threshold_bps: float = 100.0,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     if fee_config is None:
-        fee_config = {
-            "venues": {
-                "polymarket": {
-                    "taker_fee_bps": 0,
-                    "slippage_buffer_bps": 10,
-                    "fixed_buffer": 0.0,
-                }
-            }
-        }
+        fee_config = get_default_fee_config()
 
     df = load_polymarket_orderbooks(path)
     paired_books = pair_market_books(df)

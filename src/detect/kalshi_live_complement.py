@@ -8,6 +8,7 @@ from typing import Any
 import pandas as pd
 
 from src.detect.scanner_core import flag_to_dict, scan_complement_market
+from src.config.scanner_fee_config import get_default_fee_config
 
 KALSHI_CURRENT_PATH = Path("data/processed/kalshi_markets_current.parquet")
 
@@ -190,15 +191,7 @@ def scan_kalshi_complements(
     threshold_bps: float = 100.0,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     if fee_config is None:
-        fee_config = {
-            "venues": {
-                "kalshi": {
-                    "taker_fee_bps": 25,
-                    "slippage_buffer_bps": 10,
-                    "fixed_buffer": 0.0,
-                }
-            }
-        }
+        fee_config = get_default_fee_config()
 
     df = load_kalshi_current_markets(path)
 

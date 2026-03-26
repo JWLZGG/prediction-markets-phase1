@@ -3,22 +3,10 @@ from __future__ import annotations
 import json
 
 from src.detect.scanner_core import flag_to_dict, scan_complement_market, scan_cross_venue_market
+from src.config.scanner_fee_config import get_default_fee_config
 
 
-FEE_CONFIG = {
-    "venues": {
-        "polymarket": {
-            "taker_fee_bps": 0,
-            "slippage_buffer_bps": 10,
-            "fixed_buffer": 0.0,
-        },
-        "kalshi": {
-            "taker_fee_bps": 25,
-            "slippage_buffer_bps": 10,
-            "fixed_buffer": 0.0,
-        },
-    }
-}
+FEE_CONFIG = get_default_fee_config()
 
 
 def main() -> None:

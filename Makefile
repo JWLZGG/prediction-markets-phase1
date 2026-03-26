@@ -14,7 +14,10 @@ test:
 	pytest tests/
 
 run_pred:
-	python -m src.main run_pred
+	python -m src.main run_pred --mode live_complement_polymarket_loop
+
+run_pred_ingest:
+	python -m src.main run_pred --mode live
 
 run_pred_synth:
 	python -m src.main run_pred --mode synthetic
@@ -42,9 +45,3 @@ replay_crypto:
 
 setup:
 	@echo "Use the project virtual environment and install dependencies per README"
-
-run_pred:
-	python -m src.detect.prediction_scanner --mode live_complement_polymarket_loop
-
-replay_pred:
-	python -m src.backtest.replay_pred

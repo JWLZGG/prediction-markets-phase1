@@ -17,6 +17,9 @@ venues:
 scanner:
   min_edge_bps: 100
   default_target_size: 100
+  # Week 3: ranked review (console + optional snapshot for dashboards)
+  ranked_console_top_n: 25
+  ranked_snapshot_path: artifacts/outputs/scanner_ranked_latest.json
 
 log_path_complement_polymarket: logs/polymarket_complement_runs.jsonl
 polymarket_orderbook_limit_markets: 100

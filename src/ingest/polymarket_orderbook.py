@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,7 @@ from src.utils.io import ensure_dir, write_json, write_parquet
 MARKETS_PATH = Path("data/processed/polymarket_markets_current.parquet")
 RAW_DIR = Path("data/raw/polymarket_orderbooks")
 PROCESSED_PATH = Path("data/processed/polymarket_orderbooks_current.parquet")
+SNAPSHOT_DIR = Path("data/processed/polymarket_orderbooks_snapshots")
 
 # Polymarket CLOB endpoint
 CLOB_BOOK_URL = "https://clob.polymarket.com/book"
@@ -124,9 +127,27 @@ def normalize_orderbook(
     }
 
 
-def run_polymarket_orderbook_ingestion(limit_markets: int | None = 100) -> None:
+def _snapshot_name(snapshot_ts_utc: str | None = None) -> str:
+    if snapshot_ts_utc is None:
+        snapshot_ts_utc = datetime.now(UTC).isoformat()
+
+    stamp = (
+        snapshot_ts_utc.replace("-", "")
+        .replace(":", "")
+        .replace("+00:00", "Z")
+        .replace(".", "")
+    )
+    return f"polymarket_orderbooks_{stamp}.parquet"
+
+
+def run_polymarket_orderbook_ingestion(
+    limit_markets: int | None = 100,
+    snapshot_ts_utc: str | None = None,
+    persist_snapshot_copy: bool = True,
+) -> dict[str, str]:
     ensure_dir(RAW_DIR)
     ensure_dir(PROCESSED_PATH.parent)
+    ensure_dir(SNAPSHOT_DIR)
 
     markets_df = pd.read_parquet(MARKETS_PATH).copy()
     if limit_markets is not None:
@@ -187,9 +208,21 @@ def run_polymarket_orderbook_ingestion(limit_markets: int | None = 100) -> None:
     df = pd.DataFrame(rows, columns=ORDERBOOK_COLUMNS)
     write_parquet(df, PROCESSED_PATH)
 
+    snapshot_path = PROCESSED_PATH
+    if persist_snapshot_copy:
+        snapshot_path = SNAPSHOT_DIR / _snapshot_name(snapshot_ts_utc)
+        shutil.copyfile(PROCESSED_PATH, snapshot_path)
+
     print(f"[OK] Saved raw orderbook payloads to {RAW_DIR / 'current_orderbooks.json'}")
     print(f"[OK] Saved normalized parquet to {PROCESSED_PATH}")
+    if persist_snapshot_copy:
+        print(f"[OK] Saved timestamped parquet snapshot to {snapshot_path}")
     print(f"[INFO] Rows written: {len(df)}")
+
+    return {
+        "current_output_path": str(PROCESSED_PATH),
+        "snapshot_output_path": str(snapshot_path),
+    }
 
 
 if __name__ == "__main__":
