@@ -19,6 +19,9 @@ OPEN_OUT = Path("data/processed/features_open_recent.parquet")
 MID_OUT = Path("data/processed/features_mid_recent.parquet")
 T24_OUT = Path("data/processed/features_24h_recent.parquet")
 
+OPEN_WINDOW_HOURS =12
+STRICT_OPEN_WINDOW_MINUTES = 60
+
 
 def _parse_token_ids(value: Any) -> list[str]:
     if value is None:
@@ -88,7 +91,7 @@ def build_snapshots_recent() -> None:
 
     skipped_t24_short_markets = 0
     skipped_open_missing_token = 0
-    skipped_open_no_valid_price_24h = 0
+    skipped_open_no_valid_price_in_window = 0
     strict_open_60m_rows = 0
 
     for _, row in df.iterrows():
@@ -118,7 +121,6 @@ def build_snapshots_recent() -> None:
             "liquidity_num": row["liquidity_num"],
         }
 
-        # OPEN
         primary_token_id = _get_primary_token_id(row)
         if primary_token_id is None:
             skipped_open_missing_token += 1
@@ -132,7 +134,7 @@ def build_snapshots_recent() -> None:
                 created_at=open_ts,
                 history_df=history_df,
                 timestamp_col="ts",
-                window_minutes=60,
+                window_minutes=STRICT_OPEN_WINDOW_MINUTES,
             )
 
             if strict_open_ts is not None:
@@ -142,11 +144,11 @@ def build_snapshots_recent() -> None:
                 created_at=open_ts,
                 history_df=history_df,
                 timestamp_col="ts",
-                max_window_minutes=24 * 60,
+                max_window_minutes=int(OPEN_WINDOW_HOURS * 60),
             )
 
             if practical_open_ts is None:
-                skipped_open_no_valid_price_24h += 1
+                skipped_open_no_valid_price_in_window += 1
             else:
                 minutes_from_open = (practical_open_ts - open_ts).total_seconds() / 60.0
 
@@ -161,7 +163,6 @@ def build_snapshots_recent() -> None:
                     "time_to_resolution_hours": (close_ts - practical_open_ts).total_seconds() / 3600.0,
                 })
 
-        # MID
         mid_rows.append({
             **base,
             "snapshot_type": "mid",
@@ -170,7 +171,6 @@ def build_snapshots_recent() -> None:
             "time_to_resolution_hours": (close_ts - mid_ts).total_seconds() / 3600.0,
         })
 
-        # 24H
         if duration_hours >= 24:
             t24_rows.append({
                 **base,
@@ -186,12 +186,13 @@ def build_snapshots_recent() -> None:
     mid_df = pd.DataFrame(mid_rows)
     t24_df = pd.DataFrame(t24_rows)
 
-    print(f"[INFO] open snapshot rows (practical <=24h): {len(open_df)}")
-    print(f"[INFO] strict open rows (<=60m): {strict_open_60m_rows}")
+    print(f"[INFO] open window hours: {OPEN_WINDOW_HOURS}")
+    print(f"[INFO] open snapshot rows (practical <={OPEN_WINDOW_HOURS}h): {len(open_df)}")
+    print(f"[INFO] strict open rows (<={STRICT_OPEN_WINDOW_MINUTES}m): {strict_open_60m_rows}")
     print(f"[INFO] mid snapshot rows: {len(mid_df)}")
     print(f"[INFO] 24h snapshot rows: {len(t24_df)}")
     print(f"[INFO] skipped open missing token: {skipped_open_missing_token}")
-    print(f"[INFO] skipped open no valid price in 24h window: {skipped_open_no_valid_price_24h}")
+    print(f"[INFO] skipped open no valid price in {OPEN_WINDOW_HOURS}h window: {skipped_open_no_valid_price_in_window}")
     print(f"[INFO] short-duration markets skipped for 24h snapshot: {skipped_t24_short_markets}")
 
     write_parquet(open_df, OPEN_OUT)

@@ -40,6 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
             "live_complement",
             "live_complement_polymarket",
             "live_complement_polymarket_loop",
+            "live_crossvenue_matched_loop",
         ],
         default="live",
         help="Scanner mode used with run_pred",

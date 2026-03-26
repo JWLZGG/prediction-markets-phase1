@@ -7,7 +7,12 @@ from statistics import median
 from typing import Any
 
 
-INPUT_FLAGS_PATH = Path("logs/prediction_scanner_flags.jsonl")
+INPUT_FLAGS_PATHS = [
+    # Complement sanity flags are logged separately.
+    Path("logs/polymarket_complement_flags.jsonl"),
+    # Cross-venue divergence + general flags.
+    Path("logs/prediction_scanner_flags.jsonl"),
+]
 OUTPUT_ROWS_CSV = Path("artifacts/outputs/replay_pred_rows.csv")
 OUTPUT_SUMMARY_JSON = Path("artifacts/outputs/replay_pred_summary.json")
 OUTPUT_SUMMARY_MD = Path("reports/replay_pred_summary.md")
@@ -49,23 +54,32 @@ class ReplaySummary:
     by_latency: list[dict[str, Any]]
 
 
+@dataclass
+class ReplayStatus:
+    module: str
+    status: str
+    phase: str
+    implemented_now: list[str]
+    next_steps: list[str]
+
+
 def _r(x: float | None, ndigits: int = 6) -> float | None:
     if x is None:
         return None
     return round(float(x), ndigits)
 
 
-def load_flag_log(path: Path = INPUT_FLAGS_PATH) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-
+def load_flag_logs(paths: list[Path] = INPUT_FLAGS_PATHS) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            rows.append(json.loads(line))
+    for path in paths:
+        if not path.exists():
+            continue
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                rows.append(json.loads(line))
     return rows
 
 
@@ -298,8 +312,33 @@ def replay_flags(
     return replay_rows, summary
 
 
+def get_replay_status() -> ReplayStatus:
+    return ReplayStatus(
+        module="src.backtest.replay_pred",
+        status="runtime_scaffold_connected",
+        phase="Phase 1",
+        implemented_now=[
+            "log replay from JSONL flag files",
+            "latency penalty replay model",
+            "false positive + still-positive estimation",
+            "half-life estimation",
+            "CSV/JSON/Markdown outputs",
+        ],
+        next_steps=[
+            "upgrade replay to use observed-state snapshots when available",
+            "separate metrics by flag_type and size bucket",
+            "add richer quote-evolution / orderbook latency modelling",
+        ],
+    )
+
+
+def run_replay_pred() -> None:
+    # Keep CLI entrypoints stable for `python -m src.main replay_pred`.
+    main()
+
+
 def main() -> None:
-    flags = load_flag_log()
+    flags = load_flag_logs()
     replay_rows, summary = replay_flags(flags)
     write_replay_outputs(replay_rows, summary)
 

@@ -15,6 +15,7 @@ from src.detect.kalshi_live_complement import scan_kalshi_complements
 from src.detect.opportunity_ranking import display_ranked_opportunities
 from src.detect.logging_runner import build_synthetic_flags, write_flags_jsonl
 from src.detect.polymarket_live_complement import scan_polymarket_complements
+from src.detect.polymarket_live_crossvenue import scan_matched_crossvenue_pairs
 from src.ingest.kalshi_current import run_kalshi_current_ingestion
 from src.ingest.polymarket_current import run_polymarket_current_ingestion
 from src.utils.retry import retry_call
@@ -25,6 +26,7 @@ CONFIG_PATH = Path("configs/prediction_scanner.yaml")
 DEFAULT_RUN_LOG_PATH = Path("logs/prediction_scanner_runs.jsonl")
 DEFAULT_POLYMARKET_COMPLEMENT_LOG_PATH = Path("logs/polymarket_complement_runs.jsonl")
 DEFAULT_POLYMARKET_COMPLEMENT_FLAG_LOG_PATH = Path("logs/polymarket_complement_flags.jsonl")
+DEFAULT_CROSSVENUE_FLAG_LOG_PATH = Path("logs/prediction_scanner_flags.jsonl")
 
 FEE_CONFIG = get_default_fee_config()
 
@@ -70,6 +72,23 @@ class ComplementRunEvent:
     sufficient_size: int
     flags_emitted: int
     output_path: str | None
+    error: str | None
+
+
+@dataclass
+class CrossVenueRunEvent:
+    ts_utc: str
+    cycle_index: int
+    cycle_start_utc: str
+    cycle_end_utc: str
+    duration_seconds: float
+    polymarket_current_ok: bool
+    kalshi_current_ok: bool
+    polymarket_orderbooks_ok: bool
+    flags_emitted: int
+    pairs_found_on_both_venues: int
+    pairs_with_usable_buy_sell_paths: int
+    snapshot_output_path: str | None
     error: str | None
 
 
@@ -278,6 +297,172 @@ def run_one_polymarket_complement_cycle(
         output_path=snapshot_output_path if orderbook_ingestion_ok else None,
         error=error_msg,
     )
+
+
+def run_prediction_scanner_live_crossvenue_matched_loop() -> None:
+    """
+    Live loop that joins Polymarket + Kalshi via a matched-pairs config,
+    then emits `cross_venue_divergence` opportunity flags.
+    """
+    print("[INFO] Starting prediction scanner in live_crossvenue_matched_loop mode")
+
+    config = load_config()
+    loop_interval_seconds = int(config.get("loop_interval_seconds", 60))
+    max_cycles = int(config.get("max_cycles", 6))
+
+    log_path = Path(config.get("log_path", DEFAULT_RUN_LOG_PATH))
+    flags_log_path = Path(config.get("flag_log_path_crossvenue", DEFAULT_CROSSVENUE_FLAG_LOG_PATH))
+
+    limit_markets = int(config.get("polymarket_orderbook_limit_markets", 100))
+    scanner_cfg = config.get("scanner", {}) if isinstance(config.get("scanner", {}), dict) else {}
+    target_size = float(scanner_cfg.get("default_target_size", 100.0))
+    threshold_bps = float(scanner_cfg.get("min_edge_bps", 100.0))
+
+    retries = int(config.get("retry_attempts", 3))
+    backoff_seconds = float(config.get("retry_backoff_seconds", 2))
+    backoff_multiplier = float(config.get("retry_backoff_multiplier", 2))
+    kalshi_limit = int(config.get("kalshi_limit", 1000))
+    kalshi_max_pages = int(config.get("kalshi_max_pages", 5))
+    kalshi_max_markets = int(config.get("kalshi_max_markets", 5000))
+
+    print(f"[INFO] loop_interval_seconds={loop_interval_seconds}")
+    print(f"[INFO] max_cycles={max_cycles}")
+    print(f"[INFO] polymarket_orderbook_limit_markets={limit_markets}")
+    print(f"[INFO] target_size={target_size}")
+    print(f"[INFO] threshold_bps={threshold_bps}")
+    print(f"[INFO] run log_path={log_path}")
+    print(f"[INFO] flag log_path={flags_log_path}")
+
+    for cycle_index in range(1, max_cycles + 1):
+        print(f"\n[INFO] Cycle {cycle_index}/{max_cycles} started at {utc_now_iso()}")
+
+        cycle_start = utc_now_iso()
+        t0 = time.perf_counter()
+
+        polymarket_ok = False
+        kalshi_ok = False
+        polymarket_orderbooks_ok = False
+
+        flags_emitted = 0
+        pairs_found_on_both_venues = 0
+        pairs_with_usable_buy_sell_paths = 0
+        snapshot_output_path: str | None = None
+        error_msg: str | None = None
+
+        # Ingest current markets (market lists + top-of-book fields)
+        try:
+            retry_call(
+                lambda: run_polymarket_current_ingestion(),
+                retries=retries,
+                backoff_seconds=backoff_seconds,
+                backoff_multiplier=backoff_multiplier,
+            )
+            polymarket_ok = True
+        except Exception as exc:
+            error_msg = f"polymarket_ingest_failed: {exc}"
+
+        try:
+            retry_call(
+                lambda: (
+                    maybe_fail_kalshi_once(config),
+                    run_kalshi_current_ingestion(
+                        limit=kalshi_limit,
+                        max_pages=kalshi_max_pages,
+                        max_markets=kalshi_max_markets,
+                    ),
+                )[-1],
+                retries=retries,
+                backoff_seconds=backoff_seconds,
+                backoff_multiplier=backoff_multiplier,
+            )
+            kalshi_ok = True
+        except Exception as exc:
+            if error_msg is None:
+                error_msg = f"kalshi_ingest_failed: {exc}"
+            else:
+                error_msg = f"{error_msg} | kalshi_ingest_failed: {exc}"
+
+        # Ingest Polymarket YES/NO orderbooks for matched-side executable pricing.
+        try:
+            orderbook_result = run_polymarket_orderbook_ingestion(
+                limit_markets=limit_markets,
+                snapshot_ts_utc=cycle_start,
+                persist_snapshot_copy=True,
+            )
+            polymarket_orderbooks_ok = True
+            snapshot_output_path = orderbook_result.get("snapshot_output_path")
+        except Exception as exc:
+            if error_msg is None:
+                error_msg = f"polymarket_orderbook_ingest_failed: {exc}"
+            else:
+                error_msg = f"{error_msg} | polymarket_orderbook_ingest_failed: {exc}"
+
+        # Scan matched pairs and emit opportunity flags.
+        if polymarket_ok and kalshi_ok and polymarket_orderbooks_ok:
+            try:
+                flags, scan_stats = scan_matched_crossvenue_pairs(
+                    polymarket_orderbooks_path=Path(snapshot_output_path)
+                    if snapshot_output_path
+                    else POLYMARKET_ORDERBOOKS_PATH,
+                    target_size=target_size,
+                    threshold_bps=threshold_bps,
+                    fee_config=FEE_CONFIG,
+                )
+                flags_emitted = int(scan_stats.get("flags_emitted", 0))
+                pairs_found_on_both_venues = int(scan_stats.get("pairs_found_on_both_venues", 0))
+                pairs_with_usable_buy_sell_paths = int(scan_stats.get("pairs_with_usable_buy_sell_paths", 0))
+
+                if flags_emitted > 0:
+                    append_live_flags_jsonl(
+                        flags=flags,
+                        log_path=flags_log_path,
+                        source="crossvenue_live_matched",
+                        cycle_index=cycle_index,
+                        snapshot_output_path=snapshot_output_path,
+                        threshold_bps=threshold_bps,
+                    )
+                    display_ranked_opportunities(
+                        flags,
+                        config=config,
+                        title=f"Cross-venue matched opportunities (cycle {cycle_index}/{max_cycles})",
+                        cycle_index=cycle_index,
+                    )
+            except Exception as exc:
+                if error_msg is None:
+                    error_msg = f"crossvenue_scan_failed: {exc}"
+                else:
+                    error_msg = f"{error_msg} | crossvenue_scan_failed: {exc}"
+
+        cycle_end = utc_now_iso()
+        event = CrossVenueRunEvent(
+            ts_utc=cycle_end,
+            cycle_index=cycle_index,
+            cycle_start_utc=cycle_start,
+            cycle_end_utc=cycle_end,
+            duration_seconds=round(time.perf_counter() - t0, 3),
+            polymarket_current_ok=polymarket_ok,
+            kalshi_current_ok=kalshi_ok,
+            polymarket_orderbooks_ok=polymarket_orderbooks_ok,
+            flags_emitted=flags_emitted,
+            pairs_found_on_both_venues=pairs_found_on_both_venues,
+            pairs_with_usable_buy_sell_paths=pairs_with_usable_buy_sell_paths,
+            snapshot_output_path=snapshot_output_path,
+            error=error_msg,
+        )
+        append_jsonl(log_path, asdict(event))
+
+        print(
+            f"[INFO] Cycle {cycle_index} result | duration_seconds={event.duration_seconds} | "
+            f"polymarket_ok={event.polymarket_current_ok} kalshi_ok={event.kalshi_current_ok} "
+            f"orderbooks_ok={event.polymarket_orderbooks_ok} | flags_emitted={event.flags_emitted}"
+        )
+        if event.error:
+            print(f"[WARN] {event.error}")
+
+        if cycle_index < max_cycles:
+            time.sleep(loop_interval_seconds)
+
+    print("\n[OK] Polymarket+Kalshi matched cross-venue loop finished")
 
 
 def run_prediction_scanner_synthetic() -> None:
@@ -530,5 +715,7 @@ def run_prediction_scanner(mode: str = "live") -> None:
         run_prediction_scanner_live_complement_polymarket()
     elif mode == "live_complement_polymarket_loop":
         run_prediction_scanner_live_complement_polymarket_loop()
+    elif mode == "live_crossvenue_matched_loop":
+        run_prediction_scanner_live_crossvenue_matched_loop()
     else:
         raise ValueError(f"Unknown scanner mode: {mode}")

@@ -49,7 +49,7 @@ def build_model():
     model = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("classifier", LogisticRegression(max_iter=1000, random_state=42)),
+            ("classifier", LogisticRegression(max_iter=3000, random_state=42)),
         ]
     )
     return model

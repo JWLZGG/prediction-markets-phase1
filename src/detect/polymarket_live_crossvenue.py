@@ -5,8 +5,8 @@ from typing import Any
 
 import pandas as pd
 
-from src.detect.edge import compute_cross_venue_edge
-from src.detect.executable_pricing import walk_book
+from src.config.scanner_fee_config import get_default_fee_config
+from src.detect.scanner_core import flag_to_dict, scan_cross_venue_market
 from src.utils.matched_markets import (
     MATCHED_PREDICTION_MARKETS_PATH,
     load_matched_prediction_pairs,
@@ -166,20 +166,7 @@ def scan_matched_crossvenue_pairs(
     fee_config: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     if fee_config is None:
-        fee_config = {
-            "venues": {
-                "polymarket": {
-                    "taker_fee_bps": 0,
-                    "slippage_buffer_bps": 10,
-                    "fixed_buffer": 0.0,
-                },
-                "kalshi": {
-                    "taker_fee_bps": 25,
-                    "slippage_buffer_bps": 50,
-                    "fixed_buffer": 0.0,
-                },
-            }
-        }
+        fee_config = get_default_fee_config()
 
     matched_pairs = load_matched_prediction_pairs(matched_config_path)
     poly_df = load_polymarket_orderbooks(polymarket_orderbooks_path)
@@ -196,7 +183,6 @@ def scan_matched_crossvenue_pairs(
 
     for pair in matched_pairs:
         pair_id = pair["pair_id"]
-        label = pair["label"]
 
         poly = extract_polymarket_side_books(
             poly_df,
@@ -217,69 +203,30 @@ def scan_matched_crossvenue_pairs(
         usable_paths = 0
 
         directions = [
-            {
-                "buy_venue": "polymarket",
-                "sell_venue": "kalshi",
-                "buy_book": poly["asks"],
-                "sell_book": kalshi["bids"],
-            },
-            {
-                "buy_venue": "kalshi",
-                "sell_venue": "polymarket",
-                "buy_book": kalshi["asks"],
-                "sell_book": poly["bids"],
-            },
+            ("polymarket", "kalshi", poly["asks"], kalshi["bids"]),
+            ("kalshi", "polymarket", kalshi["asks"], poly["bids"]),
         ]
 
-        for direction in directions:
-            buy_book = direction["buy_book"]
-            sell_book = direction["sell_book"]
-
-            if not buy_book or not sell_book:
+        for buy_venue, sell_venue, buy_asks, sell_bids in directions:
+            if not buy_asks or not sell_bids:
                 continue
 
-            buy_result = walk_book(buy_book, target_size=target_size, side="buy")
-            sell_result = walk_book(sell_book, target_size=target_size, side="sell")
-
-            if not buy_result.executable or not sell_result.executable:
-                continue
-
-            usable_paths += 1
-
-            edge_result = compute_cross_venue_edge(
-                buy_avg_price=buy_result.avg_price,
-                sell_avg_price=sell_result.avg_price,
-                total_cost=0.0,  # keep v1 simple; venue-cost layering can be added next
+            flag = scan_cross_venue_market(
+                market_id=pair_id,
+                buy_venue=buy_venue,
+                sell_venue=sell_venue,
+                buy_asks=buy_asks,
+                sell_bids=sell_bids,
                 target_size=target_size,
+                fee_config=fee_config,
                 threshold_bps=threshold_bps,
             )
 
-            if not edge_result.should_flag:
+            if flag is None:
                 continue
 
-            flags.append(
-                {
-                    "flag_type": "cross_venue_divergence",
-                    "pair_id": pair_id,
-                    "label": label,
-                    "polymarket_market_id": pair["polymarket"]["market_id"],
-                    "kalshi_ticker": pair["kalshi"]["ticker"],
-                    "buy_venue": direction["buy_venue"],
-                    "sell_venue": direction["sell_venue"],
-                    "target_size": target_size,
-                    "details": {
-                        "buy_avg_price": _r(buy_result.avg_price, 6),
-                        "sell_avg_price": _r(sell_result.avg_price, 6),
-                        "buy_levels_used": buy_result.levels_used,
-                        "sell_levels_used": sell_result.levels_used,
-                        "gross_edge": _r(edge_result.gross_edge, 6),
-                        "total_cost": _r(edge_result.total_cost, 6),
-                        "net_edge": _r(edge_result.net_edge, 6),
-                        "net_edge_bps": _r(edge_result.net_edge_bps, 2),
-                        "should_flag": edge_result.should_flag,
-                    },
-                }
-            )
+            usable_paths += 1
+            flags.append(flag_to_dict(flag))
 
         if usable_paths > 0:
             stats["pairs_with_usable_buy_sell_paths"] += 1
