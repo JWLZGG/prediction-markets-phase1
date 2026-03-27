@@ -11,6 +11,7 @@ from src.models.baseline_logreg import run_baseline_model
 from src.models.evaluate import run_evaluate
 from src.models.score_current_kalshi import run_score_current_kalshi
 from src.models.score_current_polymarket import run_score_current_polymarket
+from src.utils.discover_matched_prediction_pairs import run_discover_matched_prediction_pairs
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,6 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
             "score_current_kalshi",
             "scanner_status",
             "replay_status",
+            "discover_matched_pairs",
             "run_pred",
             "replay_pred",
         ],
@@ -75,6 +77,8 @@ def main() -> None:
         print(get_scanner_status())
     elif args.command == "replay_status":
         print(get_replay_status())
+    elif args.command == "discover_matched_pairs":
+        run_discover_matched_prediction_pairs()
     elif args.command == "run_pred":
         run_prediction_scanner(mode=args.mode)
     elif args.command == "replay_pred":

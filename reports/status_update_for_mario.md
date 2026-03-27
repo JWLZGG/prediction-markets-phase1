@@ -2,88 +2,86 @@
 
 ## Summary
 
-The repo is in strong shape through most of Weeks 1 to 3 for the prediction-market track.
+The project is strongest on the ML Phase 1 workstream and substantially complete through most of the original Weeks 1 to 3.
 
-The core ML pipeline, detector primitives, structured logging, and current-market ranking outputs are in place. Historical data coverage exceeds the minimum target, leakage checks are implemented and tested, and offline results for midpoint and 24h-before-close are strong.
+The main repo-level strengths are:
+
+- ingestion and snapshot generation
+- leakage-aware feature construction
+- baseline modelling and calibration outputs
+- executable pricing, fees, edge math, and scanner primitives
+- structured JSONL logging
+- a now-upgraded observed-state replay path for supported Polymarket complement flags
 
 The main remaining gaps are:
 
-- bringing the `open` snapshot up to the same standard as `mid` and `24h`
-- upgrading replay from a log-summary tool into a latency-aware feasibility simulator
-- completing and documenting the 12-hour scanner stability run
-- adding `run_crypto` and `replay_crypto` Makefile targets for assignment compliance
+- cleaner proof of a single uninterrupted 12+ hour scanner session
+- real live executable flag volume, especially `10+` prediction-market flags with full logs
+- true matched cross-venue production coverage, because the matched-pairs config still contains placeholders
+- a strict canonical `open` definition that matches the original 60-minute spec
 
-## Completed
+## Current Assessment Against The Original Deliverables
 
-- Repo structure broadly matches the target layout:
-  - `src/ingest`
-  - `src/features`
-  - `src/detect`
-  - `src/backtest`
-  - `src/models`
-  - `src/utils`
-  - `configs`
-  - `reports`
-  - `notebooks`
-- Historical resolved-market coverage exceeds target:
-  - current enriched dataset contains 446 unique markets
-- Leakage and timestamp-integrity checks are implemented and unit-tested
-- Baseline model training and offline evaluation are implemented
-- Midpoint and 24h snapshot evaluation are completed and documented
-- Current-market scoring outputs exist for Polymarket and Kalshi
-- Detector primitives are implemented and tested:
-  - executable pricing
-  - fee computation
-  - edge computation
-  - scanner core
-  - structured logging
-- Config-driven scanner runtime and JSONL logging are in place
-- Replay/reporting path now exists over scanner logs
+### Week 1 — Scaffold + ingestion
 
-## Partially Complete
+Status: Met
 
-- Snapshot modelling target is only partially complete:
-  - `24h`: complete
-  - `mid`: complete
-  - `open`: not yet brought to the same usable and evaluated standard
-- Replay exists, but currently summarizes logs rather than recomputing feasibility under latency assumptions
-- Ranked outputs exist, but the strongest live-monitor acceptance criteria still need runtime validation
-- Makefile is improved, but still missing assignment-standard crypto targets
+Notes:
+- Repo structure, config-driven runtime, and ingestion modules are in place.
+- Retry handling exists and is wired into the scanner runtime.
+- Long-run logs show the scanner infrastructure is stable beyond the original 30-minute requirement.
 
-## Not Yet Demonstrated
+### Week 2 — Executable pricing + fees
 
-- 12-hour scanner stability run without crash
-- Latency-aware replay with false-positive estimation
-- Opportunity half-life and latency-tier feasibility analysis
-- Full assignment-standard Makefile command surface
+Status: Met
 
-## Week 3 Acceptance Criteria Status
+Notes:
+- Executable pricing, fee computation, and edge computation are implemented and tested.
+- Synthetic/demo scanner examples exist and match the intended Week 2 acceptance style.
 
-### 1. Scanner runs for 12 hours without crash
-
-Status: Not yet demonstrated
-
-Reason: the run is planned or in progress, but repo inspection alone cannot prove it.
-
-### 2. Logs opportunity events with full reproducibility
-
-Status: Partially met
-
-Reason: structured JSONL logs and run logs exist, but replay is not yet a full recomputation simulator under latency assumptions.
-
-### 3. Shows ranked list
+### Week 3 — Scanner + ranking + logging
 
 Status: Mostly met
 
-Reason: ranked outputs and monitor reports exist, especially on the modelling side, but live executable-monitor ranking is not yet fully validated over a long monitored run.
+Notes:
+- Ranked outputs and reviewable model/scanner outputs exist.
+- Structured logging exists and includes rich flag details.
+- Long-run stability is operationally strong, but the cleanest single-session 12-hour evidence is still weaker than ideal because sessions were mixed in the same log file.
+- No live Polymarket complement opportunities were emitted during the inspected runs, so live opportunity logging is structurally ready but not yet demonstrated at the target volume.
 
-## Immediate Priorities
+### Week 4 — Replay + performance report
 
-1. Complete `open` snapshot pipeline and evaluation so all required prediction timestamps are covered.
-2. Upgrade replay into a latency-aware feasibility simulator.
-3. Finish and document the 12-hour stability run.
-4. Add `run_crypto` and `replay_crypto` Makefile targets for assignment compliance.
+Status: Partially met
 
-## Overall Assessment
+Notes:
+- Replay runs end-to-end and now uses observed later snapshots for supported Polymarket complement flags.
+- Reporting now includes size-by-latency breakdowns.
+- Current replayable live-flag coverage is still zero because the available logged flags are synthetic or seeded, and the live Polymarket complement log is empty.
+- The `10+ executable flags with full logs` prediction target is not yet demonstrated.
 
-The project is substantially complete through most of Week 3 for the prediction-market workstream, with the largest remaining technical gaps being `open` snapshot completion and proper replay/latency validation.
+## Current Assessment Against The Adjusted ML-First 4-Week Focus
+
+Status: Mostly met
+
+Notes:
+- Historical enriched datasets are comfortably above the minimum market-count target.
+- Leakage checks, baseline modelling, calibration outputs, reporting, and notebook delivery are present.
+- `mid` and `24h` are in strong shape.
+- `open` is operationally built, but the current report uses a practical v1 fallback definition rather than the original strict 60-minute definition.
+
+## What Changed Since The Earlier Status
+
+- Replay is no longer just a penalty-based scaffold.
+- The replay report now distinguishes unsupported rows from true observed-state replay rows.
+- Size-by-latency breakdowns are now part of replay reporting.
+- The 12-hour stability summary is now filled in with the evidence currently available.
+
+## Recommendation
+
+Use the current repo as evidence that the project is strong through most of Week 3 and that the ML Phase 1 work is the most complete part of the assignment.
+
+For the next push, prioritize:
+
+1. one clean dedicated 12+ hour scanner run with isolated logs
+2. real matched cross-venue pairs or a broader executable live universe to generate live flags
+3. strict-vs-practical `open` reporting, with the strict 60-minute definition treated as the canonical acceptance metric

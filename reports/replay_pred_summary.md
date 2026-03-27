@@ -1,20 +1,36 @@
 # Replay Summary
 
-- Flags input: 4
-- Replay rows: 12
+- Flags input: 6
+- Replay rows: 18
+- Observed-state rows: 0
+- Replayable rows: 0
 - Latency scenarios: [1, 5, 10]
-- Average original net edge: 0.00875
+- Average original net edge: 0.022041
 - Estimated half-life (seconds): None
+
+## Status counts
+
+| Replay status | Rows |
+|---|---:|
+| unsupported_no_observed_state_path | 18 |
 
 ## By latency
 
-| Latency (s) | Rows | Penalty (bps) | Avg replayed net edge | Median replayed net edge | False positive rate | Still positive rate |
-|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 4 | 5.0 | 0.007963 | 0.006418 | 0.0 | 1.0 |
-| 5 | 4 | 15.0 | 0.006387 | 0.005254 | 0.25 | 0.75 |
-| 10 | 4 | 30.0 | 0.004025 | 0.003508 | 0.25 | 0.75 |
+| Latency (s) | Rows | Observed-state rows | Replayable rows | Missing later snapshot | Insufficient later liquidity | Unsupported rows | Avg replayed net edge | Median replayed net edge | False positive rate | Still positive rate |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 6 | 0 | 0 | 0 | 0 | 6 | None | None | None | None |
+| 5 | 6 | 0 | 0 | 0 | 0 | 6 | None | None | None | None |
+| 10 | 6 | 0 | 0 | 0 | 0 | 6 | None | None | None | None |
+
+## By size and latency
+
+| Size bucket | Latency (s) | Rows | Replayable rows | False positive rate | Still positive rate |
+|---|---:|---:|---:|---:|---:|
+| medium | 1 | 6 | 0 | None | None |
+| medium | 5 | 6 | 0 | None | None |
+| medium | 10 | 6 | 0 | None | None |
 
 ## Conclusion
 
-Replay v1 applies latency penalties to logged opportunities and estimates whether edge remains positive under delayed execution.
-This is a first-pass feasibility framework and can later be upgraded with richer historical orderbook or quote evolution data.
+Replay now prefers observed later-state snapshots for supported Polymarket complement flags.
+Rows without a later snapshot or without replayable live metadata are kept in the output with explicit statuses instead of being silently penalized by a proxy model.
